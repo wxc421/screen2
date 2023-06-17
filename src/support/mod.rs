@@ -13,11 +13,12 @@ use std::time::Instant;
 use glium::texture::TextureCreationError;
 use glium::uniforms::{MagnifySamplerFilter, MinifySamplerFilter, SamplerBehavior, SamplerWrapFunction};
 use image::DynamicImage;
+use imgui::sys::ImColor;
 use imgui_winit_support::winit::dpi::PhysicalPosition;
 use imgui_winit_support::winit::event::{Event, VirtualKeyCode, WindowEvent};
 use imgui_winit_support::winit::event_loop::{ControlFlow, EventLoop};
 use imgui_winit_support::winit::platform::windows::WindowBuilderExtWindows;
-use imgui_winit_support::winit::window::{CursorIcon, Fullscreen, WindowBuilder};
+use imgui_winit_support::winit::window::{CursorIcon, Fullscreen, WindowBuilder, WindowId};
 use winapi::um::wingdi;
 use winit::dpi::LogicalPosition;
 
@@ -146,16 +147,22 @@ pub fn init(title: &str) -> System {
         None => title,
     };
     let event_loop = EventLoop::new();
+    /*
+        如果你已经开启了垂直同步（VSync），它将根据显示器的刷新率来限制帧速率。
+        在这种情况下，通常不需要额外控制帧率，因为 VSync 会自动将帧速率与显示器的刷新率同步，避免出现撕裂和过度消耗资源的情况。
+        VSync 的目的是为了在图像渲染时消除撕裂效应，并提供平滑的视觉体验。
+        开启 VSync 可以让图像与显示器的刷新率同步，每秒刷新次数不会超过显示器的最大刷新率（通常为 60Hz 或 120Hz）。
+     */
     let context = glutin::ContextBuilder::new().with_vsync(true);
     let builder = WindowBuilder::new()
         .with_title(title.to_owned())
-        .with_position(glutin::dpi::LogicalPosition::new(100, 100))
+        .with_position(glutin::dpi::LogicalPosition::new(0, 0))
         .with_decorations(false)
         .with_undecorated_shadow(false)
-        .with_max_inner_size(glutin::dpi::LogicalSize::new(1024f64, 768f64))
-        .with_min_inner_size(glutin::dpi::LogicalSize::new(1024f64, 768f64))
+        .with_max_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
+        .with_min_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
         // .with_fullscreen(Some(Fullscreen::Borderless(None))) // 全屏窗口
-        .with_inner_size(glutin::dpi::LogicalSize::new(1024f64, 768f64));
+        .with_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64));
     let display =
         Display::new(builder, context, &event_loop).expect("Failed to initialize display");
 
@@ -246,32 +253,11 @@ impl System {
             mut renderer,
             ..
         } = self;
+
+        // imgui.io_mut().mouse_draw_cursor = false;
+        // imgui.io_mut().config_flags |= imgui::ConfigFlags::NO_MOUSE_CURSOR_CHANGE;
+
         let mut last_frame = Instant::now();
-        // 定义截图范围的变量
-        let mut screenshot_area = (0.0, 0.0, 0.0, 0.0);
-        let mut is_selecting = false;
-        let mut start_pos = [0.0, 0.0];
-        let mut end_pos = [0.0, 0.0];
-        let mut has_selection = false;
-        // 定义拉伸点的大小
-        let resize_handle_radius = 6.0;
-        let select_paint = false;
-
-        let mut draw_state = DrawState {
-            is_drawing: false,
-            points: Vec::new(),
-            color: [1.0, 0.0, 0.0, 1.0],
-        };
-
-        #[derive(Copy, Clone)]
-        enum ResizeHandle {
-            TopLeft,
-            TopRight,
-            BottomLeft,
-            BottomRight,
-        }
-
-        let mut active_resize_handle = Rc::new(RefCell::new(None));
 
         // 创建一个顶点缓冲对象（VBO）
         let vertex_buffer = {
@@ -327,274 +313,576 @@ impl System {
         //     },
         // });
 
-        imgui.io_mut().mouse_draw_cursor = false;
+        // imgui.io_mut().mouse_draw_cursor = false;
 
-        event_loop.run(move |event, _, control_flow| match event {
-            Event::NewEvents(_) => {
-                let now = Instant::now();
-                imgui.io_mut().update_delta_time(now - last_frame);
-                last_frame = now;
-            }
-            Event::MainEventsCleared => {
-                let gl_window = display.gl_window();
-                platform
-                    .prepare_frame(imgui.io_mut(), gl_window.window())
-                    .expect("Failed to prepare frame");
-                gl_window.window().request_redraw();
-            }
-            Event::RedrawRequested(_) => {
-                println!("RedrawRequested...");
-                // todo 不生效
-                // imgui.io_mut().mouse_draw_cursor = false;
-                let ui = imgui.frame();
-                let mut run = true;
-                // 计算背景矩形的透明度
-                let (width, height) = display.get_framebuffer_dimensions();
-                let bg_alpha = 0.5;
-                ui.window("Hello world")
-                    .title_bar(true)
-                    .resizable(false)
-                    // .always_use_window_padding(false)
-                    .no_decoration()
-                    .position([0 as f32, 0 as f32], Condition::Always)
-                    .collapsible(false)
-                    .always_use_window_padding(false)
-                    .content_size([width as f32, height as f32])
-                    .movable(false)
-                    .scrollable(false)
-                    // .bg_alpha(bg_alpha as f32) // 设置窗口背景透明度
-                    .size([width as f32, height as f32], Condition::FirstUseEver)
-                    .build(|| {
-                        let window_pos = ui.window_pos();
-                        let window_size = ui.window_size();
+        event_loop.run(move |event, _, control_flow| {
+            *control_flow = ControlFlow::Wait;
+            // println!("Event:{:?}", event);
+            match event {
+                Event::NewEvents(_) => {
+                    let now = Instant::now();
+                    imgui.io_mut().update_delta_time(now - last_frame);
+                    last_frame = now;
+                }
+                Event::MainEventsCleared => {
+                    let gl_window = display.gl_window();
+                    platform
+                        .prepare_frame(imgui.io_mut(), gl_window.window())
+                        .expect("Failed to prepare frame");
+                    gl_window.window().request_redraw();
+                }
+                // Event::RedrawRequested(_) => {
+                //     println!("RedrawRequested...");
+                //     // todo 不生效
+                //     // imgui.io_mut().mouse_draw_cursor = false;
+                //     let ui = imgui.frame();
+                //     let mut run = true;
+                //     // 计算背景矩形的透明度
+                //     let (width, height) = display.get_framebuffer_dimensions();
+                //     ui.window("Hello world")
+                //         .title_bar(true)
+                //         .resizable(false)
+                //         // .always_use_window_padding(false)
+                //         .no_decoration()
+                //         .position([0 as f32, 0 as f32], Condition::Always)
+                //         .collapsible(false)
+                //         .always_use_window_padding(false)
+                //         .content_size([width as f32, height as f32])
+                //         .movable(false)
+                //         .scrollable(false)
+                //         // .bg_alpha(bg_alpha as f32) // 设置窗口背景透明度
+                //         .size([width as f32, height as f32], Condition::FirstUseEver)
+                //         .build(|| {
+                //             let window_pos = ui.window_pos();
+                //             let window_size = ui.window_size();
+                //
+                //             let mouse_pos = ui.io().mouse_pos;
+                //             if !is_selecting && !has_selection {
+                //                 // ui.set_mouse_cursor(Some(imgui::MouseCursor::Hand));
+                //                 let draw_list = ui.get_window_draw_list();
+                //                 println!("draw_list ...");
+                //                 let cursor_pos = ui.io().mouse_pos;
+                //                 let cursor_size = 10.0;
+                //                 let cursor_half_size = cursor_size * 0.5;
+                //                 draw_list
+                //                     .add_line([cursor_pos[0] - cursor_half_size, cursor_pos[1]],
+                //                               [cursor_pos[0] + cursor_half_size, cursor_pos[1]], [1.0, 0.0, 0.0, 1.0]).build();
+                //                 draw_list.add_line([cursor_pos[0], cursor_pos[1] - cursor_half_size],
+                //                                    [cursor_pos[0], cursor_pos[1] + cursor_half_size], [1.0, 0.0, 0.0, 1.0]).build();
+                //             }
+                //             // 鼠标左键按下开始选择
+                //             if ui.is_mouse_clicked(MouseButton::Left) && !is_selecting && !has_selection {
+                //                 is_selecting = true;
+                //                 start_pos = mouse_pos;
+                //                 end_pos = mouse_pos;
+                //             }
+                //
+                //             // 绘制选择框
+                //             // if is_selecting || has_selection {
+                //             if is_selecting || has_selection {
+                //                 if is_selecting {
+                //                     end_pos = mouse_pos;
+                //                 }
+                //
+                //                 let draw_list = ui.get_window_draw_list();
+                //                 draw_list.add_rect(
+                //                     [start_pos[0], start_pos[1]],
+                //                     [end_pos[0], end_pos[1]],
+                //                     [1.0, 0.0, 0.0, 1.0],
+                //                 )
+                //                     .filled(false)
+                //                     .thickness(2.0)
+                //                     .build();
+                //
+                //                 // 绘制拉伸点
+                //                 let top_left = [start_pos[0], start_pos[1]];
+                //                 let top_right = [start_pos[0], end_pos[1]];
+                //                 let bottom_left = [end_pos[0], start_pos[1]];
+                //                 let bottom_right = [end_pos[0], end_pos[1]];
+                //
+                //                 draw_list
+                //                     .add_circle(top_left, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
+                //                     .filled(true)
+                //                     .build();
+                //                 draw_list
+                //                     .add_circle(top_right, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
+                //                     .filled(true)
+                //                     .build();
+                //                 draw_list
+                //                     .add_circle(bottom_left, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
+                //                     .filled(true)
+                //                     .build();
+                //                 draw_list
+                //                     .add_circle(bottom_right, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
+                //                     .filled(true)
+                //                     .build();
+                //
+                //                 // 绘制一个按钮...
+                //                 if ui.button("Click me!") {
+                //                     // 处理按钮点击事件的逻辑...
+                //                     println!("Button clicked!");
+                //                 }
+                //                 // // 将列设置为矩形框下方
+                //                 // ui.set_column_offset(0, 60.0); // 调整起始偏移量
+                //                 // // 在界面中绘制一排可以点击的图标...
+                //                 // let icon_size = [24.0, 24.0];
+                //                 // let icon_spacing = 10.0;
+                //                 // let num_icons = 5;
+                //                 // ui.same_line_with_spacing(0.0, -1.0);
+                //                 // for i in 0..num_icons {
+                //                 //     if ui.button("##icon_button") {
+                //                 //         // 点击图标按钮的处理逻辑...
+                //                 //         println!("Clicked icon {}", i);
+                //                 //     }
+                //                 //     ui.same_line_with_spacing(10.0, -1.0);
+                //                 //     // let draw_list = ui.get_window_draw_list();
+                //                 //     // draw_list.add_image(icon_texture_id, [x, y], [x + icon_size[0], y + icon_size[1]]).build();
+                //                 // }
+                //
+                //                 let mut handle = active_resize_handle.borrow_mut();
+                //                 // 检查是否有鼠标悬停在拉伸点上
+                //                 let handle_top_left = top_left;
+                //                 let handle_top_right = top_right;
+                //                 let handle_bottom_left = bottom_left;
+                //                 let handle_bottom_right = bottom_right;
+                //
+                //                 if euclidean_distance(
+                //                     PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
+                //                     PhysicalPosition::new(handle_top_left[0] as f64, handle_top_left[1] as f64),
+                //                 ) <= 10.0 {
+                //                     *handle = Some(ResizeHandle::TopLeft);
+                //                 } else if euclidean_distance(
+                //                     PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
+                //                     PhysicalPosition::new(handle_top_right[0] as f64, handle_top_right[1] as f64),
+                //                 ) <= 10.0 {
+                //                     *handle = Some(ResizeHandle::TopRight);
+                //                 } else if euclidean_distance(
+                //                     PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
+                //                     PhysicalPosition::new(handle_bottom_left[0] as f64, handle_bottom_left[1] as f64),
+                //                 ) <= 10.0 {
+                //                     *handle = Some(ResizeHandle::BottomLeft);
+                //                 } else if euclidean_distance(
+                //                     PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
+                //                     PhysicalPosition::new(handle_bottom_right[0] as f64, handle_bottom_right[1] as f64),
+                //                 ) <= 10.0 {
+                //                     *handle = Some(ResizeHandle::BottomRight);
+                //                 } else {
+                //                     *handle = None;
+                //                 }
+                //
+                //                 // 根据激活的拉伸点更新矩形的位置和大小
+                //                 if let Some(resize_handle) = *handle {
+                //                     match resize_handle {
+                //                         ResizeHandle::TopLeft => {
+                //                             ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNWSE));
+                //                         }
+                //                         ResizeHandle::TopRight => {
+                //                             ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNESW));
+                //                         }
+                //                         ResizeHandle::BottomLeft => {
+                //                             ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNESW));
+                //                         }
+                //                         ResizeHandle::BottomRight => {
+                //                             ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNWSE));
+                //                         }
+                //                     }
+                //                 } else {
+                //                     ui.set_mouse_cursor(Some(imgui::MouseCursor::Arrow));
+                //                 }
+                //             }
+                //
+                //
+                //             // 鼠标左键松开停止选择
+                //             if ui.is_mouse_released(MouseButton::Left) && is_selecting {
+                //                 is_selecting = false;
+                //                 end_pos = mouse_pos;
+                //                 has_selection = true;
+                //                 // 在这里可以获取选取的矩形范围，即 start_pos 和 end_pos
+                //                 println!("Selected area: {:?} - {:?}", start_pos, end_pos);
+                //             }
+                //
+                //
+                //             if select_paint {
+                //                 // 在界面中绘制用户绘制的图形...
+                //                 for point in &draw_state.points {
+                //                     let draw_list_mut = ui.get_window_draw_list();
+                //                     draw_list_mut.add_circle([point.position.0, point.position.1], 5.0, point.color).build();
+                //                 }
+                //             }
+                //
+                //             // 将桌面截图渲染到UI上的一个矩形中
+                //             // Image::new(my_texture_id, [1024 as f32, 768 as f32]).build(ui);
+                //             // ui.image(
+                //             //     screenshot_texture.sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Nearest),
+                //             //     [window_size[0], window_size[1]],
+                //             // );
+                //             // ui.text_wrapped("Hello world!");
+                //             // if ui.button(choices[value]) {
+                //             //     value += 1;
+                //             //     value %= 2;
+                //             // }
+                //             //
+                //             // ui.button("This...is...imgui-rs!");
+                //             // ui.separator();
+                //             // let mouse_pos = ui.io().mouse_pos;
+                //             // ui.text(format!(
+                //             //     "Mouse Position: ({:.1},{:.1})",
+                //             //     mouse_pos[0], mouse_pos[1]
+                //             // ));
+                //         });
+                //
+                //
+                //     if !run {
+                //         *control_flow = ControlFlow::Exit;
+                //     }
+                //
+                //     let gl_window = display.gl_window();
+                //     let mut target = display.draw();
+                //     target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
+                //     platform.prepare_render(ui, gl_window.window());
+                //     let draw_data = imgui.render();
+                //     renderer
+                //         .render(&mut target, draw_data)
+                //         .expect("Rendering failed");
+                //     target.finish().expect("Failed to swap buffers");
+                // }
+                Event::RedrawRequested(_) => {
+                    let ui = imgui.frame();
 
-                        let mouse_pos = ui.io().mouse_pos;
+                    let mut run = true;
+                    run_ui(&mut run, ui, &display);
+                    if !run {
+                        *control_flow = ControlFlow::Exit;
+                    }
 
-                        if !is_selecting && !has_selection {
-                            // ui.set_mouse_cursor(Some(imgui::MouseCursor::Hand));
-                            let draw_list = ui.get_window_draw_list();
-                            let cursor_pos = ui.io().mouse_pos;
-                            let cursor_size = 10.0;
-                            let cursor_half_size = cursor_size * 0.5;
-                            draw_list
-                                .add_line([cursor_pos[0] - cursor_half_size, cursor_pos[1]],
-                                          [cursor_pos[0] + cursor_half_size, cursor_pos[1]], [1.0, 0.0, 0.0, 1.0]).build();
-                            draw_list.add_line([cursor_pos[0], cursor_pos[1] - cursor_half_size],
-                                               [cursor_pos[0], cursor_pos[1] + cursor_half_size], [1.0, 0.0, 0.0, 1.0]).build();
+                    let gl_window = display.gl_window();
+                    let mut target = display.draw();
+                    target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
+                    platform.prepare_render(ui, gl_window.window());
+                    let draw_data = imgui.render();
+                    renderer
+                        .render(&mut target, draw_data)
+                        .expect("Rendering failed");
+                    target.finish().expect("Failed to swap buffers");
+                }
+                Event::WindowEvent {
+                    event,
+                    window_id
+                } => match event {
+                    WindowEvent::CloseRequested => {
+                        *control_flow = ControlFlow::Exit;
+                    }
+                    WindowEvent::KeyboardInput {
+                        input,
+                        ..
+                    } => {
+                        // 处理按键事件，可以在这里添加自定义逻辑
+                        if let Some(VirtualKeyCode::Escape) = input.virtual_keycode {
+                            *control_flow = ControlFlow::Exit;
                         }
-                        // 鼠标左键按下开始选择
-                        if ui.is_mouse_clicked(MouseButton::Left) && !is_selecting && !has_selection {
-                            is_selecting = true;
-                            start_pos = mouse_pos;
-                            end_pos = mouse_pos;
-                        }
-
-                        // 绘制选择框
-                        if is_selecting || has_selection {
-                            if is_selecting {
-                                end_pos = mouse_pos;
-                            }
-
-                            let draw_list = ui.get_window_draw_list();
-                            draw_list.add_rect(
-                                [start_pos[0], start_pos[1]],
-                                [end_pos[0], end_pos[1]],
-                                [1.0, 0.0, 0.0, 1.0],
-                            )
-                                .filled(false)
-                                .thickness(2.0)
-                                .build();
-
-                            // 绘制拉伸点
-                            let top_left = [start_pos[0], start_pos[1]];
-                            let top_right = [start_pos[0], end_pos[1]];
-                            let bottom_left = [end_pos[0], start_pos[1]];
-                            let bottom_right = [end_pos[0], end_pos[1]];
-
-                            draw_list
-                                .add_circle(top_left, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
-                                .filled(true)
-                                .build();
-                            draw_list
-                                .add_circle(top_right, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
-                                .filled(true)
-                                .build();
-                            draw_list
-                                .add_circle(bottom_left, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
-                                .filled(true)
-                                .build();
-                            draw_list
-                                .add_circle(bottom_right, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
-                                .filled(true)
-                                .build();
-
-                            // 绘制一个按钮...
-                            if ui.button("Click me!") {
-                                // 处理按钮点击事件的逻辑...
-                                println!("Button clicked!");
-                            }
-                            // // 将列设置为矩形框下方
-                            // ui.set_column_offset(0, 60.0); // 调整起始偏移量
-                            // // 在界面中绘制一排可以点击的图标...
-                            // let icon_size = [24.0, 24.0];
-                            // let icon_spacing = 10.0;
-                            // let num_icons = 5;
-                            // ui.same_line_with_spacing(0.0, -1.0);
-                            // for i in 0..num_icons {
-                            //     if ui.button("##icon_button") {
-                            //         // 点击图标按钮的处理逻辑...
-                            //         println!("Clicked icon {}", i);
-                            //     }
-                            //     ui.same_line_with_spacing(10.0, -1.0);
-                            //     // let draw_list = ui.get_window_draw_list();
-                            //     // draw_list.add_image(icon_texture_id, [x, y], [x + icon_size[0], y + icon_size[1]]).build();
-                            // }
-
-                            let mut handle = active_resize_handle.borrow_mut();
-                            // 检查是否有鼠标悬停在拉伸点上
-                            let handle_top_left = top_left;
-                            let handle_top_right = top_right;
-                            let handle_bottom_left = bottom_left;
-                            let handle_bottom_right = bottom_right;
-
-                            if euclidean_distance(
-                                PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
-                                PhysicalPosition::new(handle_top_left[0] as f64, handle_top_left[1] as f64),
-                            ) <= 10.0 {
-                                *handle = Some(ResizeHandle::TopLeft);
-                            } else if euclidean_distance(
-                                PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
-                                PhysicalPosition::new(handle_top_right[0] as f64, handle_top_right[1] as f64),
-                            ) <= 10.0 {
-                                *handle = Some(ResizeHandle::TopRight);
-                            } else if euclidean_distance(
-                                PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
-                                PhysicalPosition::new(handle_bottom_left[0] as f64, handle_bottom_left[1] as f64),
-                            ) <= 10.0 {
-                                *handle = Some(ResizeHandle::BottomLeft);
-                            } else if euclidean_distance(
-                                PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
-                                PhysicalPosition::new(handle_bottom_right[0] as f64, handle_bottom_right[1] as f64),
-                            ) <= 10.0 {
-                                *handle = Some(ResizeHandle::BottomRight);
-                            } else {
-                                *handle = None;
-                            }
-
-                            // 根据激活的拉伸点更新矩形的位置和大小
-                            if let Some(resize_handle) = *handle {
-                                match resize_handle {
-                                    ResizeHandle::TopLeft => {
-                                        ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNWSE));
-                                    }
-                                    ResizeHandle::TopRight => {
-                                        ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNESW));
-                                    }
-                                    ResizeHandle::BottomLeft => {
-                                        ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNESW));
-                                    }
-                                    ResizeHandle::BottomRight => {
-                                        ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNWSE));
-                                    }
-                                }
-                            } else {
-                                ui.set_mouse_cursor(Some(imgui::MouseCursor::Arrow));
-                            }
-                        }
-
-
-                        // 鼠标左键松开停止选择
-                        if ui.is_mouse_released(MouseButton::Left) && is_selecting {
-                            is_selecting = false;
-                            end_pos = mouse_pos;
-                            has_selection = true;
-                            // 在这里可以获取选取的矩形范围，即 start_pos 和 end_pos
-                            println!("Selected area: {:?} - {:?}", start_pos, end_pos);
-                        }
-
-
-                        if select_paint {
-                            // 在界面中绘制用户绘制的图形...
-                            for point in &draw_state.points {
-                                let draw_list_mut = ui.get_window_draw_list();
-                                draw_list_mut.add_circle([point.position.0, point.position.1], 5.0, point.color).build();
-                            }
-                        }
-
-                        // 将桌面截图渲染到UI上的一个矩形中
-                        // Image::new(my_texture_id, [1024 as f32, 768 as f32]).build(ui);
-                        // ui.image(
-                        //     screenshot_texture.sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Nearest),
-                        //     [window_size[0], window_size[1]],
-                        // );
-                        // ui.text_wrapped("Hello world!");
-                        // if ui.button(choices[value]) {
-                        //     value += 1;
-                        //     value %= 2;
-                        // }
+                    }
+                    WindowEvent::CursorMoved {
+                        position,
+                        ..
+                    } => {
+                        let gl_window = display.gl_window();
+                        let window = gl_window.window();
+                        println!("Mouse position: ({}, {})", position.x, position.y);
+                        // todo 研究一下
+                        let position = position.to_logical(window.scale_factor());
+                        let position = platform.scale_pos_from_winit(window, position);
+                        // io.add_mouse_pos_event([position.x as f32, position.y as f32]);
+                        imgui.io_mut().add_mouse_pos_event([position.x as f32, position.y as f32]);
+                        // if draw_state.is_drawing {
+                        //     // let pos = position.to_logical(display.gl_window().window().get_hidpi_factor());
                         //
-                        // ui.button("This...is...imgui-rs!");
-                        // ui.separator();
-                        // let mouse_pos = ui.io().mouse_pos;
-                        // ui.text(format!(
-                        //     "Mouse Position: ({:.1},{:.1})",
-                        //     mouse_pos[0], mouse_pos[1]
-                        // ));
-                    });
+                        //     draw_state.points.push(DrawPoint {
+                        //         position: (position.x as f32, position.y as f32),
+                        //         color: draw_state.color,
+                        //     });
+                        // }
+                        // display.gl_window().window().request_redraw();
+                    }
+                    event => {
+                        let event1: Event<WindowEvent> = Event::WindowEvent {
+                            window_id,
+                            event,
 
-
-                if !run {
-                    *control_flow = ControlFlow::Exit;
+                        };
+                        let gl_window = display.gl_window();
+                        platform.handle_event(imgui.io_mut(), gl_window.window(), &event1);
+                    }
                 }
-
-                let gl_window = display.gl_window();
-                let mut target = display.draw();
-                target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
-                platform.prepare_render(ui, gl_window.window());
-                let draw_data = imgui.render();
-                renderer
-                    .render(&mut target, draw_data)
-                    .expect("Rendering failed");
-                target.finish().expect("Failed to swap buffers");
-            }
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => *control_flow = ControlFlow::Exit,
-            Event::WindowEvent {
-                event: WindowEvent::KeyboardInput {
-                    input,
-                    ..
-                },
-                ..
-            } => {
-                // 处理按键事件，可以在这里添加自定义逻辑
-                if let Some(VirtualKeyCode::Escape) = input.virtual_keycode {
-                    *control_flow = ControlFlow::Exit;
+                event => {
+                    let gl_window = display.gl_window();
+                    platform.handle_event(imgui.io_mut(), gl_window.window(), &event);
                 }
-            }
-            // Event::WindowEvent {
-            //     event: WindowEvent::CursorMoved {
-            //         position,
-            //         ..
-            //     },
-            //     ..
-            // } => {
-            //     println!("Mouse position: ({}, {})", position.x, position.y);
-            //     // if draw_state.is_drawing {
-            //     //     // let pos = position.to_logical(display.gl_window().window().get_hidpi_factor());
-            //     //
-            //     //     draw_state.points.push(DrawPoint {
-            //     //         position: (position.x as f32, position.y as f32),
-            //     //         color: draw_state.color,
-            //     //     });
-            //     // }
-            //     // display.gl_window().window().request_redraw();
-            // }
-            event => {
-                let gl_window = display.gl_window();
-                platform.handle_event(imgui.io_mut(), gl_window.window(), &event);
             }
         })
     }
+}
+
+
+pub fn run() {
+    let system = init(file!());
+
+    let mut value = 0;
+    let choices = ["test test this is 1", "test test this is 2"];
+
+
+    // 定义截图范围的变量
+    let mut screenshot_area = (0.0, 0.0, 0.0, 0.0);
+    let mut is_selecting = false;
+    let mut start_pos = [0.0, 0.0];
+    let mut end_pos = [0.0, 0.0];
+    let mut has_selection = false;
+    // 定义拉伸点的大小
+    let resize_handle_radius = 6.0;
+    let select_paint = false;
+
+    let mut draw_state = DrawState {
+        is_drawing: false,
+        points: Vec::new(),
+        color: [1.0, 0.0, 0.0, 1.0],
+    };
+
+    #[derive(Copy, Clone)]
+    enum ResizeHandle {
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+        Inner,
+    }
+
+    let mut active_resize_handle: Rc<RefCell<Option<ResizeHandle>>> = Rc::new(RefCell::new(None));
+
+
+    system.main_loop(move |_,
+                           mut ui,
+                           display| {
+        let (width, height) = display.get_framebuffer_dimensions();
+        ui.window("Hello world")
+            .title_bar(true)
+            .resizable(false)
+            // .always_use_window_padding(false)
+            .no_decoration()
+            .position([0 as f32, 0 as f32], Condition::Always)
+            .collapsible(false)
+            .always_use_window_padding(false)
+            .content_size([width as f32, height as f32])
+            .movable(false)
+            .scrollable(false)
+            // .bg_alpha(bg_alpha as f32) // 设置窗口背景透明度
+            .size([width as f32, height as f32], Condition::FirstUseEver)
+            .build(|| {
+                let window_pos = ui.window_pos();
+                let window_size = ui.window_size();
+                // ui.io().mouse_draw_cursor = true;
+                ui.text_wrapped("Hello world!");
+
+                // ui.set_mouse_cursor(Some(imgui::MouseCursor::Hand));
+                println!("draw_list ...");
+                // 绘制一个矩形
+                let draw_list = ui.get_window_draw_list();
+                draw_list.add_rect(
+                    [20 as f32, 20 as f32],
+                    [100 as f32, 100 as f32],
+                    [1.0, 0.0, 0.0, 1.0],
+                )
+                    .filled(false)
+                    .thickness(2.0)
+                    .build();
+
+                draw_list
+                    .add_line([10.0 - 5.0, 20.0],
+                              [10.0 + 5.0, 20.0], [1.0, 0.0, 0.0, 1.0]).thickness(3.0).build();
+                let cursor_pos = ui.io().mouse_pos;
+                let mouse_pos = cursor_pos;
+                println!("====================cursor_pos:{:?}", cursor_pos);
+                println!("====================cursor_pos:{:?}", ui.io().mouse_draw_cursor);
+                // let cursor_size = 5.0;
+                // let cursor_half_size = cursor_size * 0.5;
+                // draw_list
+                //     .add_line([cursor_pos[0] - cursor_half_size, cursor_pos[1]],
+                //               [cursor_pos[0] + cursor_half_size, cursor_pos[1]], [1.0, 0.0, 0.0, 1.0]).thickness(3.0).build();
+                // draw_list.add_line([cursor_pos[0], cursor_pos[1] - cursor_half_size],
+                //                    [cursor_pos[0], cursor_pos[1] + cursor_half_size], [1.0, 0.0, 0.0, 1.0]).build();
+                if !is_selecting && !has_selection {
+                    display.gl_window().window().set_cursor_visible(false);
+                    let cursor_size = 10.0;
+                    let cursor_half_size = cursor_size * 0.5;
+                    draw_list
+                        .add_line([cursor_pos[0] - cursor_half_size, cursor_pos[1]],
+                                  [cursor_pos[0] + cursor_half_size, cursor_pos[1]], [1.0, 0.0, 0.0, 1.0]).build();
+                    draw_list.add_line([cursor_pos[0], cursor_pos[1] - cursor_half_size],
+                                       [cursor_pos[0], cursor_pos[1] + cursor_half_size], [1.0, 0.0, 0.0, 1.0]).build();
+                }
+                println!("ui.is_mouse_clicked(MouseButton::Left):{}", ui.is_mouse_clicked(MouseButton::Left));
+                // 鼠标左键按下开始选择
+                if ui.is_mouse_clicked(MouseButton::Left) && !is_selecting && !has_selection {
+                    println!("==sdsssddssd");
+                    display.gl_window().window().set_cursor_visible(true);
+                    ui.set_mouse_cursor(Some(imgui::MouseCursor::Arrow));
+                    is_selecting = true;
+                    start_pos = mouse_pos;
+                    end_pos = mouse_pos;
+                }
+
+                // 绘制选择框
+                // if is_selecting || has_selection {
+                if is_selecting || has_selection {
+                    if is_selecting {
+                        end_pos = mouse_pos;
+                    }
+
+                    draw_list.add_rect(
+                        [start_pos[0], start_pos[1]],
+                        [end_pos[0], end_pos[1]],
+                        [1.0, 0.0, 0.0, 1.0],
+                    )
+                        .filled(false)
+                        .thickness(2.0)
+                        .build();
+
+                    // 绘制拉伸点
+                    let top_left = [start_pos[0], start_pos[1]];
+                    let top_right = [start_pos[0], end_pos[1]];
+                    let bottom_left = [end_pos[0], start_pos[1]];
+                    let bottom_right = [end_pos[0], end_pos[1]];
+
+                    draw_list
+                        .add_circle(top_left, resize_handle_radius, [0.0, 0.0, 0.4, 1.0])
+                        .filled(true)
+                        .build();
+                    draw_list
+                        .add_circle(top_right, resize_handle_radius, [0.0, 0.0, 0.4, 1.0])
+                        .filled(true)
+                        .build();
+                    draw_list
+                        .add_circle(bottom_left, resize_handle_radius, [0.0, 0.0, 0.4, 1.0])
+                        .filled(true)
+                        .build();
+                    draw_list
+                        .add_circle(bottom_right, resize_handle_radius, [0.0, 0.0, 0.4, 1.0])
+                        .filled(true)
+                        .build();
+
+                    // 绘制一个按钮...
+                    if ui.button("Click me!") {
+                        // 处理按钮点击事件的逻辑...
+                        println!("Button clicked!");
+                    }
+                    // // 将列设置为矩形框下方
+                    // ui.set_column_offset(0, 60.0); // 调整起始偏移量
+                    // // 在界面中绘制一排可以点击的图标...
+                    // let icon_size = [24.0, 24.0];
+                    // let icon_spacing = 10.0;
+                    // let num_icons = 5;
+                    // ui.same_line_with_spacing(0.0, -1.0);
+                    // for i in 0..num_icons {
+                    //     if ui.button("##icon_button") {
+                    //         // 点击图标按钮的处理逻辑...
+                    //         println!("Clicked icon {}", i);
+                    //     }
+                    //     ui.same_line_with_spacing(10.0, -1.0);
+                    //     // let draw_list = ui.get_window_draw_list();
+                    //     // draw_list.add_image(icon_texture_id, [x, y], [x + icon_size[0], y + icon_size[1]]).build();
+                    // }
+
+                    let mut handle = active_resize_handle.borrow_mut();
+                    // 检查是否有鼠标悬停在拉伸点上
+                    let handle_top_left = top_left;
+                    let handle_top_right = top_right;
+                    let handle_bottom_left = bottom_left;
+                    let handle_bottom_right = bottom_right;
+
+                    if euclidean_distance(
+                        PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
+                        PhysicalPosition::new(handle_top_left[0] as f64, handle_top_left[1] as f64),
+                    ) <= 10.0 {
+                        *handle = Some(ResizeHandle::TopLeft);
+                    } else if euclidean_distance(
+                        PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
+                        PhysicalPosition::new(handle_top_right[0] as f64, handle_top_right[1] as f64),
+                    ) <= 10.0 {
+                        *handle = Some(ResizeHandle::TopRight);
+                    } else if euclidean_distance(
+                        PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
+                        PhysicalPosition::new(handle_bottom_left[0] as f64, handle_bottom_left[1] as f64),
+                    ) <= 10.0 {
+                        *handle = Some(ResizeHandle::BottomLeft);
+                    } else if euclidean_distance(
+                        PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
+                        PhysicalPosition::new(handle_bottom_right[0] as f64, handle_bottom_right[1] as f64),
+                    ) <= 10.0 {
+                        *handle = Some(ResizeHandle::BottomRight);
+                    } else {
+                        *handle = Some(ResizeHandle::Inner);
+                    }
+
+                    // 根据激活的拉伸点更新矩形的位置和大小
+                    if let Some(resize_handle) = *handle {
+                        match resize_handle {
+                            ResizeHandle::TopLeft => {
+                                ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNWSE));
+                            }
+                            ResizeHandle::TopRight => {
+                                ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNESW));
+                            }
+                            ResizeHandle::BottomLeft => {
+                                ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNESW));
+                            }
+                            ResizeHandle::BottomRight => {
+                                ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNWSE));
+                            }
+                            ResizeHandle::Inner => {
+                                ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeAll));
+                            }
+                        }
+                    } else {
+                        ui.set_mouse_cursor(Some(imgui::MouseCursor::Arrow));
+                    }
+                }
+
+
+                // 鼠标左键松开停止选择
+                if ui.is_mouse_released(MouseButton::Left) && is_selecting {
+                    is_selecting = false;
+                    end_pos = mouse_pos;
+                    has_selection = true;
+                    // 在这里可以获取选取的矩形范围，即 start_pos 和 end_pos
+                    println!("Selected area: {:?} - {:?}", start_pos, end_pos);
+                }
+
+
+                if select_paint {
+                    // 在界面中绘制用户绘制的图形...
+                    for point in &draw_state.points {
+                        let draw_list_mut = ui.get_window_draw_list();
+                        draw_list_mut.add_circle([point.position.0, point.position.1], 5.0, point.color).build();
+                    }
+                }
+
+                // 将桌面截图渲染到UI上的一个矩形中
+                // Image::new(my_texture_id, [1024 as f32, 768 as f32]).build(ui);
+                // ui.image(
+                //     screenshot_texture.sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Nearest),
+                //     [window_size[0], window_size[1]],
+                // );
+                // ui.text_wrapped("Hello world!");
+                // if ui.button(choices[value]) {
+                //     value += 1;
+                //     value %= 2;
+                // }
+                //
+                // ui.button("This...is...imgui-rs!");
+                // ui.separator();
+                // let mouse_pos = ui.io().mouse_pos;
+                // ui.text(format!(
+                //     "Mouse Position: ({:.1},{:.1})",
+                //     mouse_pos[0], mouse_pos[1]
+                // ));
+            });
+    });
 }
