@@ -13,7 +13,7 @@ use std::time::Instant;
 use glium::texture::TextureCreationError;
 use glium::uniforms::{MagnifySamplerFilter, MinifySamplerFilter, SamplerBehavior, SamplerWrapFunction};
 use image::DynamicImage;
-use imgui::sys::ImColor;
+use imgui::sys::{igBullet};
 use imgui_winit_support::winit::dpi::PhysicalPosition;
 use imgui_winit_support::winit::event::{Event, VirtualKeyCode, WindowEvent};
 use imgui_winit_support::winit::event_loop::{ControlFlow, EventLoop};
@@ -21,6 +21,7 @@ use imgui_winit_support::winit::platform::windows::WindowBuilderExtWindows;
 use imgui_winit_support::winit::window::{CursorIcon, Fullscreen, WindowBuilder, WindowId};
 use winapi::um::wingdi;
 use winit::dpi::LogicalPosition;
+use crate::util;
 
 
 pub struct System {
@@ -231,6 +232,12 @@ pub fn init(title: &str) -> System {
     //     },
     // ]);
 
+    // 设置 ImGui 样式
+    let mut style = imgui.style_mut();
+    style.child_border_size = 0.0;
+    // style[ImGuiStyleVar::ButtonHovered] = *(&[1.0, 0.5, 0.0, 1.0] as *const [f32; 4]
+    //     as *const [f32; 4]); // 将悬停时的颜色设置为橙色
+
     let renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
 
     System {
@@ -243,8 +250,12 @@ pub fn init(title: &str) -> System {
     }
 }
 
+struct UiInfo {
+    copy_to_clipboard_texture_id: imgui::TextureId,
+}
+
 impl System {
-    pub fn main_loop<F: FnMut(&mut bool, &mut Ui, &Display) + 'static>(self, mut run_ui: F) {
+    pub fn main_loop<F: FnMut(&mut bool, &mut Ui, &Display, &UiInfo) + 'static>(self, mut run_ui: F) {
         let System {
             event_loop,
             display,
@@ -315,8 +326,24 @@ impl System {
 
         // imgui.io_mut().mouse_draw_cursor = false;
 
+
+        // 加载纹理
+        // let facade: &dyn glium::backend::Facade = &display;
+        // let x = Box::new(facade);
+        // let texture2d = util::svg::load_data_to_2d(include_bytes!("../../haha.png"), Box::new(facade));
+        let texture2d = util::svg::load_data_to_2d(include_bytes!("../../fuzhidaojiantieban.png"), Box::new(&display));
+        let copy_to_clipboard_texture_id = renderer.textures().insert(Texture {
+            texture: Rc::new((texture2d)),
+            sampler: Default::default(),
+        });
+
+        let ui_info = UiInfo {
+            copy_to_clipboard_texture_id,
+        };
+
         event_loop.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::Wait;
+            *control_flow = ControlFlow::Poll;
+            // *control_flow = ControlFlow::Wait;
             // println!("Event:{:?}", event);
             match event {
                 Event::NewEvents(_) => {
@@ -550,7 +577,7 @@ impl System {
                     let ui = imgui.frame();
 
                     let mut run = true;
-                    run_ui(&mut run, ui, &display);
+                    run_ui(&mut run, ui, &display, &ui_info);
                     if !run {
                         *control_flow = ControlFlow::Exit;
                     }
@@ -622,6 +649,11 @@ impl System {
     }
 }
 
+// 判断鼠标位置是否在矩形框内
+pub fn is_mouse_in_rect(mouse_x: f32, mouse_y: f32, rect_x: f32, rect_y: f32, rect_width: f32, rect_height: f32) -> bool {
+    mouse_x >= rect_x && mouse_x <= rect_x + rect_width && mouse_y >= rect_y && mouse_y <= rect_y + rect_height
+}
+
 
 pub fn run() {
     let system = init(file!());
@@ -653,6 +685,7 @@ pub fn run() {
         BottomLeft,
         BottomRight,
         Inner,
+        Outer,
     }
 
     let mut active_resize_handle: Rc<RefCell<Option<ResizeHandle>>> = Rc::new(RefCell::new(None));
@@ -660,7 +693,9 @@ pub fn run() {
 
     system.main_loop(move |_,
                            mut ui,
-                           display| {
+                           display,
+                           ui_info,
+    | {
         let (width, height) = display.get_framebuffer_dimensions();
         ui.window("Hello world")
             .title_bar(true)
@@ -676,10 +711,17 @@ pub fn run() {
             // .bg_alpha(bg_alpha as f32) // 设置窗口背景透明度
             .size([width as f32, height as f32], Condition::FirstUseEver)
             .build(|| {
+                // ui.push_style_color(imgui::StyleColor::Text, [1.0, 0.0, 0.0, 1.0]); // 设置文本颜色为红色
+                const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+                let color = ui.push_style_color(imgui::StyleColor::Text, RED);
+                ui.text("I'm red!");
+                color.pop();
+
                 let window_pos = ui.window_pos();
                 let window_size = ui.window_size();
                 // ui.io().mouse_draw_cursor = true;
                 ui.text_wrapped("Hello world!");
+
 
                 // ui.set_mouse_cursor(Some(imgui::MouseCursor::Hand));
                 println!("draw_list ...");
@@ -750,7 +792,6 @@ pub fn run() {
                     let top_right = [start_pos[0], end_pos[1]];
                     let bottom_left = [end_pos[0], start_pos[1]];
                     let bottom_right = [end_pos[0], end_pos[1]];
-
                     draw_list
                         .add_circle(top_left, resize_handle_radius, [0.0, 0.0, 0.4, 1.0])
                         .filled(true)
@@ -768,10 +809,13 @@ pub fn run() {
                         .filled(true)
                         .build();
 
-                    // 绘制一个按钮...
-                    if ui.button("Click me!") {
-                        // 处理按钮点击事件的逻辑...
-                        println!("Button clicked!");
+                    if has_selection {
+                        // 绘制一个按钮...
+                        if ui.button("Click me!") {
+                            // 处理按钮点击事件的逻辑...
+                            println!("Button clicked!");
+                        }
+                        ui.image_button("hello", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
                     }
                     // // 将列设置为矩形框下方
                     // ui.set_column_offset(0, 60.0); // 调整起始偏移量
@@ -818,7 +862,32 @@ pub fn run() {
                     ) <= 10.0 {
                         *handle = Some(ResizeHandle::BottomRight);
                     } else {
-                        *handle = Some(ResizeHandle::Inner);
+                        println!("mouse_pos:{:?}", mouse_pos);
+                        println!("handle_top_left:{:?}", handle_top_left);
+                        println!("handle_bottom_right[0] - handle_bottom_left[0]:{:?}", handle_bottom_right[0] - handle_bottom_left[0]);
+                        println!("handle_bottom_right[0] - handle_top_right[0]:{:?}", handle_bottom_right[0] - handle_top_right[0]);
+                        if is_mouse_in_rect(
+                            mouse_pos[0],
+                            mouse_pos[1],
+                            handle_top_left[0],
+                            handle_top_left[1],
+                            handle_bottom_right[0] - handle_top_left[0],
+                            handle_bottom_right[1] - handle_top_left[1],
+                        ) {
+                            println!("=====================in");
+                            *handle = Some(ResizeHandle::Inner);
+                        } else {
+                            *handle = Some(ResizeHandle::Outer);
+                        }
+
+                        if has_selection {
+                            // let color = ui.push_style_color(imgui::StyleColor::Button, imgui::ImColor32::from(0xffffffff).to_rgba_f32s());
+                            // let color = ui.push_style_color(imgui::StyleColor::ButtonHovered, imgui::ImColor32::from(0xff0000).to_rgba_f32s());
+                            // ui.image_button("hello", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+                            // ui.image_button("hello", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+                            // ui.image_button("hello", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+                            // ui.image_button("hello", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+                        }
                     }
 
                     // 根据激活的拉伸点更新矩形的位置和大小
@@ -839,9 +908,10 @@ pub fn run() {
                             ResizeHandle::Inner => {
                                 ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeAll));
                             }
+                            ResizeHandle::Outer => {
+                                ui.set_mouse_cursor(Some(imgui::MouseCursor::Arrow));
+                            }
                         }
-                    } else {
-                        ui.set_mouse_cursor(Some(imgui::MouseCursor::Arrow));
                     }
                 }
 
