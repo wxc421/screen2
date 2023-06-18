@@ -163,10 +163,10 @@ pub fn init(title: &str) -> System {
         .with_visible(false)
         .with_position(glutin::dpi::LogicalPosition::new(0, 0))
         .with_decorations(false)
-        .with_undecorated_shadow(false)
+        .with_undecorated_shadow(false);
         // .with_max_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
         // .with_min_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
-        .with_fullscreen(Some(Fullscreen::Borderless(None))); // 全屏窗口
+        // .with_fullscreen(Some(Fullscreen::Borderless(None))); // 全屏窗口
     // .with_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64));
     let display =
         Display::new(builder, context, &event_loop).expect("Failed to initialize display");
@@ -378,8 +378,8 @@ impl System {
         println!("will into event_loop");
 
         event_loop.run(move |event, _, control_flow| {
-            // *control_flow = ControlFlow::Poll;
-            *control_flow = ControlFlow::Wait;
+            *control_flow = ControlFlow::Poll;
+            // *control_flow = ControlFlow::Wait;
             println!("Event:{:?}", event);
             match event {
                 Event::NewEvents(_) => {
