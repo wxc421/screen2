@@ -1,8 +1,11 @@
+use std::fs;
 use std::io::Cursor;
 use std::ops::Deref;
-use glium::Texture2d;
+use std::time::Instant;
+use glium::{Display, Texture2d};
 use glium::texture::{RawImage2d, Texture2dDataSource};
 use imgui_glium_renderer::{Renderer, Texture};
+use screenshots::{Image, Screen};
 use usvg::TreeParsing;
 
 
@@ -63,10 +66,16 @@ use usvg::TreeParsing;
 ///
 /// 需要注意的是，`Box<&dyn glium::backend::Facade>` 类型的对象需要保证在其使用的整个生命周期内，被引用的对象都是有效的。
 #[doc(alias = "loadDataTo2d")]
-pub fn load_data_to_2d(data: &[u8], display: Box<&dyn glium::backend::Facade>) -> Texture2d {
-    // 加载图片数据
+pub fn load_data_to_2d(data: &[u8], display: &Display) -> Texture2d {
+    // 创建一个Instant对象，用于记录开始时间
+    let start = Instant::now();
+
+
     let image = image::load(Cursor::new(data),
                             image::ImageFormat::Png).unwrap().to_rgba8();
+
+    // 计算方法执行所花费的总时间
+    println!("image::load(Cursor::new(data)方法执行耗时: {:?}", start.elapsed());
 
     let image_dimensions = image.dimensions();
     /*
@@ -83,11 +92,38 @@ pub fn load_data_to_2d(data: &[u8], display: Box<&dyn glium::backend::Facade>) -
         总之，使用 from_raw_rgba 或者 from_raw_rgba_reversed 函数都可以用来创建2D纹理对象，取决于图像数据的存储方式。
      */
     let image_vec = image.into_raw();
-    let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image_vec, image_dimensions);
+    let image = glium::texture::RawImage2d::from_raw_rgba(image_vec, image_dimensions);
+
 
     // 创建纹理对象
-    let display = display.deref();
-    let texture = Texture2d::new(*display, image).unwrap();
+    let texture = Texture2d::new(display, image).unwrap();
 
     texture
+}
+
+
+pub(crate) fn capture(display: &Display) -> Texture2d {
+    // 创建一个Instant对象，用于记录开始时间
+    let start = Instant::now();
+
+    let screens = Screen::all().unwrap();
+    // todo 这里拿到的值不对
+    /*
+        error: capturer [Screen { display_info: DisplayInfo { id: 2776250164, x: 0, y: 0, width: 2880, height: 1800, rotation: 0.0, scale_factor: 1.0, is_primary: true } }]
+        正确的: capturer [Screen { display_info: DisplayInfo { id: 2776250164, x: 0, y: 0, width: 1440, height: 900, rotation: 0.0, scale_factor: 2.0, is_primary: true } }]
+     */
+    println!("capturer {screens:?}");
+    let mut image = screens[0].capture().unwrap();
+    println!("capture方法执行耗时: {:?}", start.elapsed());
+    let width = image.width();
+    let height = image.height();
+    let vec: Vec<u8> = image.into();
+    let image = glium::texture::RawImage2d::from_raw_rgba(vec, (width, height));
+
+
+    // 计算方法执行所花费的总时间
+
+    // 创建纹理对象
+    let texture = Texture2d::new(display, image).unwrap();
+    return texture;
 }

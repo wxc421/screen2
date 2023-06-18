@@ -4,6 +4,9 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::mpsc::{channel, Receiver};
+use std::thread;
 use glium::{glutin, implement_vertex, Texture2d};
 use glium::{Display, Surface};
 use imgui::{Condition, Context, FontConfig, FontGlyphRanges, FontSource, Image, MouseButton, Ui};
@@ -157,13 +160,14 @@ pub fn init(title: &str) -> System {
     let context = glutin::ContextBuilder::new().with_vsync(true);
     let builder = WindowBuilder::new()
         .with_title(title.to_owned())
+        .with_visible(false)
         .with_position(glutin::dpi::LogicalPosition::new(0, 0))
         .with_decorations(false)
         .with_undecorated_shadow(false)
-        .with_max_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
-        .with_min_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
-        // .with_fullscreen(Some(Fullscreen::Borderless(None))) // 全屏窗口
-        .with_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64));
+        // .with_max_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
+        // .with_min_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
+        .with_fullscreen(Some(Fullscreen::Borderless(None))); // 全屏窗口
+    // .with_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64));
     let display =
         Display::new(builder, context, &event_loop).expect("Failed to initialize display");
 
@@ -237,7 +241,6 @@ pub fn init(title: &str) -> System {
     style.child_border_size = 0.0;
     // style[ImGuiStyleVar::ButtonHovered] = *(&[1.0, 0.5, 0.0, 1.0] as *const [f32; 4]
     //     as *const [f32; 4]); // 将悬停时的颜色设置为橙色
-
     let renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
 
     System {
@@ -250,9 +253,25 @@ pub fn init(title: &str) -> System {
     }
 }
 
-struct UiInfo {
+pub struct UiInfo {
     copy_to_clipboard_texture_id: imgui::TextureId,
+    background_texture_id: imgui::TextureId,
 }
+
+// 异步加载纹理的函数
+// fn load_texture_async(display: Arc<Display>) -> Receiver<Texture2d> {
+//     let (tx, rx) = channel();
+//     thread::spawn(move || {
+//         // 异步加载纹理的逻辑
+//         // 例如，从文件系统或网络中加载纹理
+//
+//         // 在这里将纹理数据传递给主线程
+//         let texture2d = util::svg::load_data_to_2d(include_bytes!("../../fuzhidaojiantieban.png"), &*display);
+//         tx.send(texture2d).unwrap();
+//     });
+//
+//     rx
+// }
 
 impl System {
     pub fn main_loop<F: FnMut(&mut bool, &mut Ui, &Display, &UiInfo) + 'static>(self, mut run_ui: F) {
@@ -267,6 +286,10 @@ impl System {
 
         // imgui.io_mut().mouse_draw_cursor = false;
         // imgui.io_mut().config_flags |= imgui::ConfigFlags::NO_MOUSE_CURSOR_CHANGE;
+
+        imgui.style_mut().frame_border_size = 0.0;
+        imgui.style_mut().frame_padding = [0.0, 0.0];
+        imgui.style_mut().item_inner_spacing = [0.0, 0.0];
 
         let mut last_frame = Instant::now();
 
@@ -331,20 +354,33 @@ impl System {
         // let facade: &dyn glium::backend::Facade = &display;
         // let x = Box::new(facade);
         // let texture2d = util::svg::load_data_to_2d(include_bytes!("../../haha.png"), Box::new(facade));
-        let texture2d = util::svg::load_data_to_2d(include_bytes!("../../fuzhidaojiantieban.png"), Box::new(&display));
+
+        println!("srart load_data_to_2d");
+
+        let texture2d = util::svg::load_data_to_2d(include_bytes!("../../fuzhidaojiantieban.png"), &display);
         let copy_to_clipboard_texture_id = renderer.textures().insert(Texture {
+            texture: Rc::new((texture2d)),
+            sampler: Default::default(),
+        });
+
+
+        let texture2d = util::svg::capture(&display);
+        let background_texture_id = renderer.textures().insert(Texture {
             texture: Rc::new((texture2d)),
             sampler: Default::default(),
         });
 
         let ui_info = UiInfo {
             copy_to_clipboard_texture_id,
+            background_texture_id,
         };
+
+        println!("will into event_loop");
 
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
             // *control_flow = ControlFlow::Wait;
-            // println!("Event:{:?}", event);
+            println!("Event:{:?}", event);
             match event {
                 Event::NewEvents(_) => {
                     let now = Instant::now();
@@ -357,6 +393,7 @@ impl System {
                         .prepare_frame(imgui.io_mut(), gl_window.window())
                         .expect("Failed to prepare frame");
                     gl_window.window().request_redraw();
+                    // display.gl_window().window().set_visible(true);
                 }
                 // Event::RedrawRequested(_) => {
                 //     println!("RedrawRequested...");
@@ -574,6 +611,7 @@ impl System {
                 //     target.finish().expect("Failed to swap buffers");
                 // }
                 Event::RedrawRequested(_) => {
+                    println!("=======================");
                     let ui = imgui.frame();
 
                     let mut run = true;
@@ -590,7 +628,9 @@ impl System {
                     renderer
                         .render(&mut target, draw_data)
                         .expect("Rendering failed");
+                    display.gl_window().window().set_visible(true);
                     target.finish().expect("Failed to swap buffers");
+
                 }
                 Event::WindowEvent {
                     event,
@@ -616,8 +656,12 @@ impl System {
                         let window = gl_window.window();
                         println!("Mouse position: ({}, {})", position.x, position.y);
                         // todo 研究一下
-                        let position = position.to_logical(window.scale_factor());
+                        let scale = window.scale_factor(); // 2
+                        println!("window.scale_factor():{}", scale);
+                        let position = position.to_logical(scale);
+                        println!("position.to_logical(scale):{:?}", position);
                         let position = platform.scale_pos_from_winit(window, position);
+                        println!("platform.scale_pos_from_winit(window, position):{:?}", position);
                         // io.add_mouse_pos_event([position.x as f32, position.y as f32]);
                         imgui.io_mut().add_mouse_pos_event([position.x as f32, position.y as f32]);
                         // if draw_state.is_drawing {
@@ -696,7 +740,20 @@ pub fn run() {
                            display,
                            ui_info,
     | {
+        ui.push_style_var(imgui::StyleVar::ButtonTextAlign([0.0, 0.0]));
+        ui.push_style_var(imgui::StyleVar::ItemSpacing([0.0, 0.0]));
+        ui.push_style_var(imgui::StyleVar::FrameBorderSize(0.0));
+        ui.push_style_var(imgui::StyleVar::FramePadding([0.0, 0.0]));
+
+
+        // 这里获得是物理像素值: 2880x1800 我的电脑缩放是200%，因此需要/2
         let (width, height) = display.get_framebuffer_dimensions();
+
+        let scale_factor = display.gl_window().window().scale_factor();
+
+        let logical_width = (width as f64 / scale_factor) as u32;
+        let logical_height = (height as f64 / scale_factor) as u32;
+
         ui.window("Hello world")
             .title_bar(true)
             .resizable(false)
@@ -705,28 +762,62 @@ pub fn run() {
             .position([0 as f32, 0 as f32], Condition::Always)
             .collapsible(false)
             .always_use_window_padding(false)
-            .content_size([width as f32, height as f32])
+            .content_size([logical_width as f32, logical_height as f32])
+            // .content_size([width as f32, height as f32])
             .movable(false)
             .scrollable(false)
             // .bg_alpha(bg_alpha as f32) // 设置窗口背景透明度
-            .size([width as f32, height as f32], Condition::FirstUseEver)
+            .size([logical_width as f32, logical_height as f32], Condition::FirstUseEver)
+            // .size([width as f32, height as f32], Condition::FirstUseEver)
             .build(|| {
                 // ui.push_style_color(imgui::StyleColor::Text, [1.0, 0.0, 0.0, 1.0]); // 设置文本颜色为红色
                 const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+                /*
+                    push_style_color 和 push_style_var 都是 ImGui 中用于在绘制过程中临时修改样式的函数。
+                    push_style_color 函数用于临时修改颜色样式。它允许你指定一个索引，例如 StyleColor::Text，以及对应的颜色值，然后在调用 pop_style_color 函数之前，ImGui 将使用新的颜色值进行渲染。
+                    push_style_var 函数用于临时修改通用样式变量。
+                    它允许你指定一个样式变量，例如按钮间距 (StyleVar::ButtonSpacing)，以及对应的新值。
+                    在调用 pop_style_var 函数之前，ImGui 将使用新的样式变量值进行渲染。
+                 */
                 let color = ui.push_style_color(imgui::StyleColor::Text, RED);
+                // 没用 使用 None 来临时重置按钮间距
+                ui.push_style_var(imgui::StyleVar::ButtonTextAlign([0.0, 0.0]));
+                ui.push_style_var(imgui::StyleVar::ItemSpacing([0.0, 0.0]));
+                ui.push_style_var(imgui::StyleVar::FramePadding([0.0, 0.0]));
+                ui.push_style_var(imgui::StyleVar::FrameBorderSize(0.0));
+
                 ui.text("I'm red!");
                 color.pop();
-
+                // 在同一行放置两个按钮
+                ui.button("Button 1");
+                ui.same_line_with_spacing(0.0, 0.0);
+                ui.button("Button 2");
                 let window_pos = ui.window_pos();
                 let window_size = ui.window_size();
+                println!("window_size:{:?}", window_size);
                 // ui.io().mouse_draw_cursor = true;
                 ui.text_wrapped("Hello world!");
 
+                // 没用
+                // ui.push_style_var(imgui::StyleVar::FramePadding([0.0, 0.0]));
+                // ui.push_style_var(imgui::StyleVar::FrameBorderSize(0.0));
 
                 // ui.set_mouse_cursor(Some(imgui::MouseCursor::Hand));
                 println!("draw_list ...");
                 // 绘制一个矩形
                 let draw_list = ui.get_window_draw_list();
+
+                println!("ui_info.background_texture_id:{:?}", ui_info.background_texture_id);
+                draw_list
+                    .add_image(
+                        ui_info.background_texture_id,
+                        [0.0, 0.0],
+                        // [window_size[0] as f32, window_size[1] as f32],
+                        [window_size[0] as f32, window_size[1] as f32],
+                    )
+                    .col([1.0, 1.0, 1.0, 0.3])
+                    .build();
+
                 draw_list.add_rect(
                     [20 as f32, 20 as f32],
                     [100 as f32, 100 as f32],
@@ -787,6 +878,15 @@ pub fn run() {
                         .thickness(2.0)
                         .build();
 
+                    // 绘制背景图像
+                    draw_list
+                        .add_image(ui_info.copy_to_clipboard_texture_id, [start_pos[0], start_pos[1]], [end_pos[0], end_pos[1]])
+                        // .add_image(ui_info.copy_to_clipboard_texture_id, [0.0, 0.0], [100.0, 100.0])
+                        // .col([1.0, 1.0, 1.0, 0.5])
+                        .build();
+
+                    // println!("copy_to_clipboard_texture_id:{:?}",ui_info.copy_to_clipboard_texture_id);
+
                     // 绘制拉伸点
                     let top_left = [start_pos[0], start_pos[1]];
                     let top_right = [start_pos[0], end_pos[1]];
@@ -815,7 +915,21 @@ pub fn run() {
                             // 处理按钮点击事件的逻辑...
                             println!("Button clicked!");
                         }
-                        ui.image_button("hello", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+                        println!("bottom_right:{:?}", bottom_right);
+                        ui.set_cursor_pos([bottom_right[0] - 6.0 * 20.0, bottom_right[1] + 10.0]);
+                        ui.image_button("hello1", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+                        ui.same_line_with_spacing(0.0, 0.0);
+                        ui.image_button("hello2", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+                        ui.same_line_with_spacing(0.0, 0.0);
+                        ui.image_button("hello3", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+                        ui.same_line_with_spacing(0.0, 0.0);
+                        ui.image_button("hello4", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+                        ui.same_line_with_spacing(0.0, 0.0);
+                        ui.image_button("hello5", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+                        ui.same_line_with_spacing(0.0, 0.0);
+                        ui.image_button("hello6", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
+
+                        println!("ui.item_rect_size():{:?}", ui.item_rect_size());
                     }
                     // // 将列设置为矩形框下方
                     // ui.set_column_offset(0, 60.0); // 调整起始偏移量
