@@ -378,8 +378,8 @@ impl System {
         println!("will into event_loop");
 
         event_loop.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::Poll;
-            // *control_flow = ControlFlow::Wait;
+            // *control_flow = ControlFlow::Poll;
+            *control_flow = ControlFlow::Wait;
             println!("Event:{:?}", event);
             match event {
                 Event::NewEvents(_) => {
@@ -393,6 +393,25 @@ impl System {
                         .prepare_frame(imgui.io_mut(), gl_window.window())
                         .expect("Failed to prepare frame");
                     gl_window.window().request_redraw();
+                    println!("=======================");
+                    let ui = imgui.frame();
+
+                    let mut run = true;
+                    run_ui(&mut run, ui, &display, &ui_info);
+                    if !run {
+                        *control_flow = ControlFlow::Exit;
+                    }
+
+                    let gl_window = display.gl_window();
+                    let mut target = display.draw();
+                    target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
+                    platform.prepare_render(ui, gl_window.window());
+                    let draw_data = imgui.render();
+                    renderer
+                        .render(&mut target, draw_data)
+                        .expect("Rendering failed");
+                    target.finish().expect("Failed to swap buffers");
+                    display.gl_window().window().set_visible(true);
                     // display.gl_window().window().set_visible(true);
                 }
                 // Event::RedrawRequested(_) => {
@@ -611,6 +630,7 @@ impl System {
                 //     target.finish().expect("Failed to swap buffers");
                 // }
                 Event::RedrawRequested(_) => {
+                    return;
                     println!("=======================");
                     let ui = imgui.frame();
 
@@ -630,7 +650,6 @@ impl System {
                         .expect("Rendering failed");
                     display.gl_window().window().set_visible(true);
                     target.finish().expect("Failed to swap buffers");
-
                 }
                 Event::WindowEvent {
                     event,
@@ -815,7 +834,7 @@ pub fn run() {
                         // [window_size[0] as f32, window_size[1] as f32],
                         [window_size[0] as f32, window_size[1] as f32],
                     )
-                    .col([1.0, 1.0, 1.0, 0.3])
+                    .col([1.0, 1.0, 1.0, 0.6])
                     .build();
 
                 draw_list.add_rect(
@@ -880,9 +899,11 @@ pub fn run() {
 
                     // 绘制背景图像
                     draw_list
-                        .add_image(ui_info.copy_to_clipboard_texture_id, [start_pos[0], start_pos[1]], [end_pos[0], end_pos[1]])
+                        .add_image(ui_info.background_texture_id, [start_pos[0], start_pos[1]], [end_pos[0], end_pos[1]])
                         // .add_image(ui_info.copy_to_clipboard_texture_id, [0.0, 0.0], [100.0, 100.0])
-                        // .col([1.0, 1.0, 1.0, 0.5])
+                        .uv_min([start_pos[0] / logical_width as f32, start_pos[1] / logical_height as f32])
+                        .uv_max([end_pos[0] / logical_width as f32, end_pos[1] / logical_height as f32])
+                        .col([1.0, 1.0, 1.0, 1.0])
                         .build();
 
                     // println!("copy_to_clipboard_texture_id:{:?}",ui_info.copy_to_clipboard_texture_id);
