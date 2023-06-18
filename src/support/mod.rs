@@ -698,26 +698,26 @@ pub fn run() {
                         .build();
 
                     // println!("copy_to_clipboard_texture_id:{:?}",ui_info.copy_to_clipboard_texture_id);
-
+                    let color = ImColor32::from_rgb(215, 236, 249).to_rgba_f32s();
                     // 绘制拉伸点
                     let top_left = [start_pos[0], start_pos[1]];
                     let top_right = [start_pos[0], end_pos[1]];
                     let bottom_left = [end_pos[0], start_pos[1]];
                     let bottom_right = [end_pos[0], end_pos[1]];
                     draw_list
-                        .add_circle(top_left, resize_handle_radius, [0.0, 0.0, 0.4, 1.0])
+                        .add_circle(top_left, resize_handle_radius, color)
                         .filled(true)
                         .build();
                     draw_list
-                        .add_circle(top_right, resize_handle_radius, [0.0, 0.0, 0.4, 1.0])
+                        .add_circle(top_right, resize_handle_radius, color)
                         .filled(true)
                         .build();
                     draw_list
-                        .add_circle(bottom_left, resize_handle_radius, [0.0, 0.0, 0.4, 1.0])
+                        .add_circle(bottom_left, resize_handle_radius, color)
                         .filled(true)
                         .build();
                     draw_list
-                        .add_circle(bottom_right, resize_handle_radius, [0.0, 0.0, 0.4, 1.0])
+                        .add_circle(bottom_right, resize_handle_radius, color)
                         .filled(true)
                         .build();
 
