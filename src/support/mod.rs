@@ -9,7 +9,7 @@ use std::sync::mpsc::{channel, Receiver};
 use std::thread;
 use glium::{glutin, implement_vertex, Texture2d};
 use glium::{Display, Surface};
-use imgui::{Condition, Context, FontConfig, FontGlyphRanges, FontSource, Image, MouseButton, Ui};
+use imgui::{Condition, Context, FontConfig, FontGlyphRanges, FontSource, Image, ImColor32, MouseButton, StyleColor, Ui};
 use imgui_glium_renderer::{Renderer, Texture};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use std::time::Instant;
@@ -163,10 +163,10 @@ pub fn init(title: &str) -> System {
         .with_visible(false)
         .with_position(glutin::dpi::LogicalPosition::new(0, 0))
         .with_decorations(false)
-        .with_undecorated_shadow(false);
+        .with_undecorated_shadow(false)
         // .with_max_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
         // .with_min_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
-        // .with_fullscreen(Some(Fullscreen::Borderless(None))); // 全屏窗口
+        .with_fullscreen(Some(Fullscreen::Borderless(None))); // 全屏窗口
     // .with_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64));
     let display =
         Display::new(builder, context, &event_loop).expect("Failed to initialize display");
@@ -239,6 +239,11 @@ pub fn init(title: &str) -> System {
     // 设置 ImGui 样式
     let mut style = imgui.style_mut();
     style.child_border_size = 0.0;
+
+    // 修改按钮的默认颜色
+    style.colors[StyleColor::Button as usize] = imgui::ImColor32::from_rgb(255, 255, 255).to_rgba_f32s();
+
+
     // style[ImGuiStyleVar::ButtonHovered] = *(&[1.0, 0.5, 0.0, 1.0] as *const [f32; 4]
     //     as *const [f32; 4]); // 将悬停时的颜色设置为橙色
     let renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
@@ -414,221 +419,6 @@ impl System {
                     display.gl_window().window().set_visible(true);
                     // display.gl_window().window().set_visible(true);
                 }
-                // Event::RedrawRequested(_) => {
-                //     println!("RedrawRequested...");
-                //     // todo 不生效
-                //     // imgui.io_mut().mouse_draw_cursor = false;
-                //     let ui = imgui.frame();
-                //     let mut run = true;
-                //     // 计算背景矩形的透明度
-                //     let (width, height) = display.get_framebuffer_dimensions();
-                //     ui.window("Hello world")
-                //         .title_bar(true)
-                //         .resizable(false)
-                //         // .always_use_window_padding(false)
-                //         .no_decoration()
-                //         .position([0 as f32, 0 as f32], Condition::Always)
-                //         .collapsible(false)
-                //         .always_use_window_padding(false)
-                //         .content_size([width as f32, height as f32])
-                //         .movable(false)
-                //         .scrollable(false)
-                //         // .bg_alpha(bg_alpha as f32) // 设置窗口背景透明度
-                //         .size([width as f32, height as f32], Condition::FirstUseEver)
-                //         .build(|| {
-                //             let window_pos = ui.window_pos();
-                //             let window_size = ui.window_size();
-                //
-                //             let mouse_pos = ui.io().mouse_pos;
-                //             if !is_selecting && !has_selection {
-                //                 // ui.set_mouse_cursor(Some(imgui::MouseCursor::Hand));
-                //                 let draw_list = ui.get_window_draw_list();
-                //                 println!("draw_list ...");
-                //                 let cursor_pos = ui.io().mouse_pos;
-                //                 let cursor_size = 10.0;
-                //                 let cursor_half_size = cursor_size * 0.5;
-                //                 draw_list
-                //                     .add_line([cursor_pos[0] - cursor_half_size, cursor_pos[1]],
-                //                               [cursor_pos[0] + cursor_half_size, cursor_pos[1]], [1.0, 0.0, 0.0, 1.0]).build();
-                //                 draw_list.add_line([cursor_pos[0], cursor_pos[1] - cursor_half_size],
-                //                                    [cursor_pos[0], cursor_pos[1] + cursor_half_size], [1.0, 0.0, 0.0, 1.0]).build();
-                //             }
-                //             // 鼠标左键按下开始选择
-                //             if ui.is_mouse_clicked(MouseButton::Left) && !is_selecting && !has_selection {
-                //                 is_selecting = true;
-                //                 start_pos = mouse_pos;
-                //                 end_pos = mouse_pos;
-                //             }
-                //
-                //             // 绘制选择框
-                //             // if is_selecting || has_selection {
-                //             if is_selecting || has_selection {
-                //                 if is_selecting {
-                //                     end_pos = mouse_pos;
-                //                 }
-                //
-                //                 let draw_list = ui.get_window_draw_list();
-                //                 draw_list.add_rect(
-                //                     [start_pos[0], start_pos[1]],
-                //                     [end_pos[0], end_pos[1]],
-                //                     [1.0, 0.0, 0.0, 1.0],
-                //                 )
-                //                     .filled(false)
-                //                     .thickness(2.0)
-                //                     .build();
-                //
-                //                 // 绘制拉伸点
-                //                 let top_left = [start_pos[0], start_pos[1]];
-                //                 let top_right = [start_pos[0], end_pos[1]];
-                //                 let bottom_left = [end_pos[0], start_pos[1]];
-                //                 let bottom_right = [end_pos[0], end_pos[1]];
-                //
-                //                 draw_list
-                //                     .add_circle(top_left, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
-                //                     .filled(true)
-                //                     .build();
-                //                 draw_list
-                //                     .add_circle(top_right, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
-                //                     .filled(true)
-                //                     .build();
-                //                 draw_list
-                //                     .add_circle(bottom_left, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
-                //                     .filled(true)
-                //                     .build();
-                //                 draw_list
-                //                     .add_circle(bottom_right, resize_handle_radius, [0.0, 0.0, 1.0, 1.0])
-                //                     .filled(true)
-                //                     .build();
-                //
-                //                 // 绘制一个按钮...
-                //                 if ui.button("Click me!") {
-                //                     // 处理按钮点击事件的逻辑...
-                //                     println!("Button clicked!");
-                //                 }
-                //                 // // 将列设置为矩形框下方
-                //                 // ui.set_column_offset(0, 60.0); // 调整起始偏移量
-                //                 // // 在界面中绘制一排可以点击的图标...
-                //                 // let icon_size = [24.0, 24.0];
-                //                 // let icon_spacing = 10.0;
-                //                 // let num_icons = 5;
-                //                 // ui.same_line_with_spacing(0.0, -1.0);
-                //                 // for i in 0..num_icons {
-                //                 //     if ui.button("##icon_button") {
-                //                 //         // 点击图标按钮的处理逻辑...
-                //                 //         println!("Clicked icon {}", i);
-                //                 //     }
-                //                 //     ui.same_line_with_spacing(10.0, -1.0);
-                //                 //     // let draw_list = ui.get_window_draw_list();
-                //                 //     // draw_list.add_image(icon_texture_id, [x, y], [x + icon_size[0], y + icon_size[1]]).build();
-                //                 // }
-                //
-                //                 let mut handle = active_resize_handle.borrow_mut();
-                //                 // 检查是否有鼠标悬停在拉伸点上
-                //                 let handle_top_left = top_left;
-                //                 let handle_top_right = top_right;
-                //                 let handle_bottom_left = bottom_left;
-                //                 let handle_bottom_right = bottom_right;
-                //
-                //                 if euclidean_distance(
-                //                     PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
-                //                     PhysicalPosition::new(handle_top_left[0] as f64, handle_top_left[1] as f64),
-                //                 ) <= 10.0 {
-                //                     *handle = Some(ResizeHandle::TopLeft);
-                //                 } else if euclidean_distance(
-                //                     PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
-                //                     PhysicalPosition::new(handle_top_right[0] as f64, handle_top_right[1] as f64),
-                //                 ) <= 10.0 {
-                //                     *handle = Some(ResizeHandle::TopRight);
-                //                 } else if euclidean_distance(
-                //                     PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
-                //                     PhysicalPosition::new(handle_bottom_left[0] as f64, handle_bottom_left[1] as f64),
-                //                 ) <= 10.0 {
-                //                     *handle = Some(ResizeHandle::BottomLeft);
-                //                 } else if euclidean_distance(
-                //                     PhysicalPosition::new(mouse_pos[0] as f64, mouse_pos[1] as f64),
-                //                     PhysicalPosition::new(handle_bottom_right[0] as f64, handle_bottom_right[1] as f64),
-                //                 ) <= 10.0 {
-                //                     *handle = Some(ResizeHandle::BottomRight);
-                //                 } else {
-                //                     *handle = None;
-                //                 }
-                //
-                //                 // 根据激活的拉伸点更新矩形的位置和大小
-                //                 if let Some(resize_handle) = *handle {
-                //                     match resize_handle {
-                //                         ResizeHandle::TopLeft => {
-                //                             ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNWSE));
-                //                         }
-                //                         ResizeHandle::TopRight => {
-                //                             ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNESW));
-                //                         }
-                //                         ResizeHandle::BottomLeft => {
-                //                             ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNESW));
-                //                         }
-                //                         ResizeHandle::BottomRight => {
-                //                             ui.set_mouse_cursor(Some(imgui::MouseCursor::ResizeNWSE));
-                //                         }
-                //                     }
-                //                 } else {
-                //                     ui.set_mouse_cursor(Some(imgui::MouseCursor::Arrow));
-                //                 }
-                //             }
-                //
-                //
-                //             // 鼠标左键松开停止选择
-                //             if ui.is_mouse_released(MouseButton::Left) && is_selecting {
-                //                 is_selecting = false;
-                //                 end_pos = mouse_pos;
-                //                 has_selection = true;
-                //                 // 在这里可以获取选取的矩形范围，即 start_pos 和 end_pos
-                //                 println!("Selected area: {:?} - {:?}", start_pos, end_pos);
-                //             }
-                //
-                //
-                //             if select_paint {
-                //                 // 在界面中绘制用户绘制的图形...
-                //                 for point in &draw_state.points {
-                //                     let draw_list_mut = ui.get_window_draw_list();
-                //                     draw_list_mut.add_circle([point.position.0, point.position.1], 5.0, point.color).build();
-                //                 }
-                //             }
-                //
-                //             // 将桌面截图渲染到UI上的一个矩形中
-                //             // Image::new(my_texture_id, [1024 as f32, 768 as f32]).build(ui);
-                //             // ui.image(
-                //             //     screenshot_texture.sampled().magnify_filter(glium::uniforms::MagnifySamplerFilter::Nearest),
-                //             //     [window_size[0], window_size[1]],
-                //             // );
-                //             // ui.text_wrapped("Hello world!");
-                //             // if ui.button(choices[value]) {
-                //             //     value += 1;
-                //             //     value %= 2;
-                //             // }
-                //             //
-                //             // ui.button("This...is...imgui-rs!");
-                //             // ui.separator();
-                //             // let mouse_pos = ui.io().mouse_pos;
-                //             // ui.text(format!(
-                //             //     "Mouse Position: ({:.1},{:.1})",
-                //             //     mouse_pos[0], mouse_pos[1]
-                //             // ));
-                //         });
-                //
-                //
-                //     if !run {
-                //         *control_flow = ControlFlow::Exit;
-                //     }
-                //
-                //     let gl_window = display.gl_window();
-                //     let mut target = display.draw();
-                //     target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
-                //     platform.prepare_render(ui, gl_window.window());
-                //     let draw_data = imgui.render();
-                //     renderer
-                //         .render(&mut target, draw_data)
-                //         .expect("Rendering failed");
-                //     target.finish().expect("Failed to swap buffers");
-                // }
                 Event::RedrawRequested(_) => {
                     return;
                     println!("=======================");
@@ -790,7 +580,7 @@ pub fn run() {
             // .size([width as f32, height as f32], Condition::FirstUseEver)
             .build(|| {
                 // ui.push_style_color(imgui::StyleColor::Text, [1.0, 0.0, 0.0, 1.0]); // 设置文本颜色为红色
-                const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+                // const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
                 /*
                     push_style_color 和 push_style_var 都是 ImGui 中用于在绘制过程中临时修改样式的函数。
                     push_style_color 函数用于临时修改颜色样式。它允许你指定一个索引，例如 StyleColor::Text，以及对应的颜色值，然后在调用 pop_style_color 函数之前，ImGui 将使用新的颜色值进行渲染。
@@ -798,35 +588,35 @@ pub fn run() {
                     它允许你指定一个样式变量，例如按钮间距 (StyleVar::ButtonSpacing)，以及对应的新值。
                     在调用 pop_style_var 函数之前，ImGui 将使用新的样式变量值进行渲染。
                  */
-                let color = ui.push_style_color(imgui::StyleColor::Text, RED);
+                // let color = ui.push_style_color(imgui::StyleColor::Text, RED);
                 // 没用 使用 None 来临时重置按钮间距
                 ui.push_style_var(imgui::StyleVar::ButtonTextAlign([0.0, 0.0]));
                 ui.push_style_var(imgui::StyleVar::ItemSpacing([0.0, 0.0]));
                 ui.push_style_var(imgui::StyleVar::FramePadding([0.0, 0.0]));
                 ui.push_style_var(imgui::StyleVar::FrameBorderSize(0.0));
 
-                ui.text("I'm red!");
-                color.pop();
-                // 在同一行放置两个按钮
-                ui.button("Button 1");
-                ui.same_line_with_spacing(0.0, 0.0);
-                ui.button("Button 2");
-                let window_pos = ui.window_pos();
+                // ui.text("I'm red!");
+                // color.pop();
+                // // 在同一行放置两个按钮
+                // ui.button("Button 1");
+                // ui.same_line_with_spacing(0.0, 0.0);
+                // ui.button("Button 2");
+                // let window_pos = ui.window_pos();
                 let window_size = ui.window_size();
                 println!("window_size:{:?}", window_size);
-                // ui.io().mouse_draw_cursor = true;
-                ui.text_wrapped("Hello world!");
+                // // ui.io().mouse_draw_cursor = true;
+                // ui.text_wrapped("Hello world!");
 
                 // 没用
                 // ui.push_style_var(imgui::StyleVar::FramePadding([0.0, 0.0]));
                 // ui.push_style_var(imgui::StyleVar::FrameBorderSize(0.0));
 
                 // ui.set_mouse_cursor(Some(imgui::MouseCursor::Hand));
-                println!("draw_list ...");
-                // 绘制一个矩形
+                // println!("draw_list ...");
+                // // 绘制一个矩形
                 let draw_list = ui.get_window_draw_list();
-
-                println!("ui_info.background_texture_id:{:?}", ui_info.background_texture_id);
+                //
+                // println!("ui_info.background_texture_id:{:?}", ui_info.background_texture_id);
                 draw_list
                     .add_image(
                         ui_info.background_texture_id,
@@ -836,23 +626,23 @@ pub fn run() {
                     )
                     .col([1.0, 1.0, 1.0, 0.6])
                     .build();
-
-                draw_list.add_rect(
-                    [20 as f32, 20 as f32],
-                    [100 as f32, 100 as f32],
-                    [1.0, 0.0, 0.0, 1.0],
-                )
-                    .filled(false)
-                    .thickness(2.0)
-                    .build();
-
-                draw_list
-                    .add_line([10.0 - 5.0, 20.0],
-                              [10.0 + 5.0, 20.0], [1.0, 0.0, 0.0, 1.0]).thickness(3.0).build();
+                //
+                // draw_list.add_rect(
+                //     [20 as f32, 20 as f32],
+                //     [100 as f32, 100 as f32],
+                //     [1.0, 0.0, 0.0, 1.0],
+                // )
+                //     .filled(false)
+                //     .thickness(2.0)
+                //     .build();
+                //
+                // draw_list
+                //     .add_line([10.0 - 5.0, 20.0],
+                //               [10.0 + 5.0, 20.0], [1.0, 0.0, 0.0, 1.0]).thickness(3.0).build();
                 let cursor_pos = ui.io().mouse_pos;
                 let mouse_pos = cursor_pos;
-                println!("====================cursor_pos:{:?}", cursor_pos);
-                println!("====================cursor_pos:{:?}", ui.io().mouse_draw_cursor);
+                // println!("====================cursor_pos:{:?}", cursor_pos);
+                // println!("====================cursor_pos:{:?}", ui.io().mouse_draw_cursor);
                 // let cursor_size = 5.0;
                 // let cursor_half_size = cursor_size * 0.5;
                 // draw_list
@@ -862,13 +652,13 @@ pub fn run() {
                 //                    [cursor_pos[0], cursor_pos[1] + cursor_half_size], [1.0, 0.0, 0.0, 1.0]).build();
                 if !is_selecting && !has_selection {
                     display.gl_window().window().set_cursor_visible(false);
-                    let cursor_size = 10.0;
+                    let cursor_size = 20.0;
                     let cursor_half_size = cursor_size * 0.5;
                     draw_list
                         .add_line([cursor_pos[0] - cursor_half_size, cursor_pos[1]],
-                                  [cursor_pos[0] + cursor_half_size, cursor_pos[1]], [1.0, 0.0, 0.0, 1.0]).build();
+                                  [cursor_pos[0] + cursor_half_size, cursor_pos[1]], [1.0, 1.0, 1.0, 1.0]).build();
                     draw_list.add_line([cursor_pos[0], cursor_pos[1] - cursor_half_size],
-                                       [cursor_pos[0], cursor_pos[1] + cursor_half_size], [1.0, 0.0, 0.0, 1.0]).build();
+                                       [cursor_pos[0], cursor_pos[1] + cursor_half_size], [1.0, 1.0, 1.0, 1.0]).build();
                 }
                 println!("ui.is_mouse_clicked(MouseButton::Left):{}", ui.is_mouse_clicked(MouseButton::Left));
                 // 鼠标左键按下开始选择
@@ -891,7 +681,8 @@ pub fn run() {
                     draw_list.add_rect(
                         [start_pos[0], start_pos[1]],
                         [end_pos[0], end_pos[1]],
-                        [1.0, 0.0, 0.0, 1.0],
+                        // [1.0, 0.0, 0.0, 1.0],
+                        ImColor32::from(0xffffffff).to_rgba_f32s(),
                     )
                         .filled(false)
                         .thickness(2.0)
@@ -932,10 +723,10 @@ pub fn run() {
 
                     if has_selection {
                         // 绘制一个按钮...
-                        if ui.button("Click me!") {
-                            // 处理按钮点击事件的逻辑...
-                            println!("Button clicked!");
-                        }
+                        // if ui.button("Click me!") {
+                        //     // 处理按钮点击事件的逻辑...
+                        //     println!("Button clicked!");
+                        // }
                         println!("bottom_right:{:?}", bottom_right);
                         ui.set_cursor_pos([bottom_right[0] - 6.0 * 20.0, bottom_right[1] + 10.0]);
                         ui.image_button("hello1", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
