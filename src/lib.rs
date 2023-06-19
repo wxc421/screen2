@@ -1,6 +1,18 @@
 mod support;
+mod util;
+mod ffi;
 
-#[no_mangle]
-pub extern "C" fn hello_from_rust() {
+fn run_screenshot() {
     support::run();
+}
+
+
+#[cfg(test)]
+mod tests {
+    use crate::run_screenshot;
+
+    #[test]
+    fn test_run_screenshot() {
+        run_screenshot();
+    }
 }

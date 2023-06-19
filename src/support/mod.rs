@@ -13,6 +13,7 @@ use imgui::{Condition, Context, FontConfig, FontGlyphRanges, FontSource, Image, 
 use imgui_glium_renderer::{Renderer, Texture};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use std::time::Instant;
+use glium::glutin::platform::windows::EventLoopBuilderExtWindows;
 use glium::texture::TextureCreationError;
 use glium::uniforms::{MagnifySamplerFilter, MinifySamplerFilter, SamplerBehavior, SamplerWrapFunction};
 use image::DynamicImage;
@@ -22,8 +23,7 @@ use imgui_winit_support::winit::event::{Event, VirtualKeyCode, WindowEvent};
 use imgui_winit_support::winit::event_loop::{ControlFlow, EventLoop};
 use imgui_winit_support::winit::platform::windows::WindowBuilderExtWindows;
 use imgui_winit_support::winit::window::{CursorIcon, Fullscreen, WindowBuilder, WindowId};
-use winapi::um::wingdi;
-use winit::dpi::LogicalPosition;
+use winit::event_loop::{EventLoopBuilder, EventLoopWindowTarget};
 use crate::util;
 
 
@@ -45,93 +45,10 @@ struct Vertex {
 
 implement_vertex!(Vertex, position, tex_coords);
 
-fn capture_screenshot(display: &glium::Display) -> Result<glium::texture::Texture2d, glium::texture::TextureCreationError> {
-    let screen_size = display.get_framebuffer_dimensions();
-
-    // 获取桌面截图的像素数据
-    let screenshot = get_screenshot(screen_size.0 as u32, screen_size.1 as u32);
-    // 创建纹理
-    let binding = screenshot.unwrap();
-    let raw_image = glium::texture::RawImage2d {
-        data: Cow::Borrowed(binding.as_ref()),
-        width: screen_size.0 as u32,
-        height: screen_size.1 as u32,
-        format: glium::texture::ClientFormat::U8U8U8,
-    };
-
-    let texture = glium::texture::Texture2d::new(display, raw_image)?;
-    Ok(texture)
-}
-
 fn euclidean_distance(a: PhysicalPosition<f64>, b: PhysicalPosition<f64>) -> f64 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
     f64::sqrt(dx * dx + dy * dy)
-}
-
-#[cfg(target_os = "windows")]
-pub fn get_screenshot(width: u32, height: u32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    use std::mem;
-    use winapi::um::winuser;
-
-    let hwnd = unsafe { winuser::GetDesktopWindow() };
-    let hdc_source = unsafe { winuser::GetDC(hwnd) };
-    let hdc_dest = unsafe { wingdi::CreateCompatibleDC(hdc_source) };
-    let mut pixels = vec![0; (width * height * 3) as usize];
-
-    let mut bitmap_info = wingdi::BITMAPINFO {
-        bmiHeader: wingdi::BITMAPINFOHEADER {
-            biSize: std::mem::size_of::<wingdi::BITMAPINFOHEADER>() as u32,
-            biWidth: width as i32,
-            biHeight: height as i32, // 负数表示从顶部到底部扫描
-            biPlanes: 1,
-            biBitCount: 24, // 每个像素占 24 位，每个通道占 8 位
-            biCompression: wingdi::BI_RGB,
-            biSizeImage: 0,
-            biXPelsPerMeter: 0,
-            biYPelsPerMeter: 0,
-            biClrUsed: 0,
-            biClrImportant: 0,
-        },
-        bmiColors: [wingdi::RGBQUAD {
-            rgbBlue: 0,
-            rgbGreen: 0,
-            rgbRed: 0,
-            rgbReserved: 0,
-        }],
-    };
-
-    let bitmap =
-        unsafe { wingdi::CreateCompatibleBitmap(hdc_source, width as i32, height as i32) };
-    unsafe {
-        wingdi::SelectObject(hdc_dest, bitmap as winapi::shared::windef::HGDIOBJ);
-        wingdi::BitBlt(
-            hdc_dest,
-            0,
-            0,
-            width as i32,
-            height as i32,
-            hdc_source,
-            0,
-            0,
-            winapi::um::wingdi::SRCCOPY,
-        );
-
-        wingdi::GetDIBits(
-            hdc_dest,
-            bitmap,
-            0,
-            height as u32,
-            pixels.as_mut_ptr() as *mut _,
-            &mut bitmap_info as *mut _ as *mut wingdi::BITMAPINFO,
-            wingdi::DIB_RGB_COLORS,
-        );
-        wingdi::DeleteDC(hdc_dest);
-        winuser::ReleaseDC(hwnd, hdc_source);
-        wingdi::DeleteObject(bitmap as winapi::shared::windef::HGDIOBJ);
-    }
-
-    Ok(pixels)
 }
 
 struct DrawPoint {
@@ -150,7 +67,7 @@ pub fn init(title: &str) -> System {
         Some(file_name) => file_name.to_str().unwrap(),
         None => title,
     };
-    let event_loop = EventLoop::new();
+    let event_loop = glutin::event_loop::EventLoopBuilder::new().with_any_thread(true).build();
     /*
         如果你已经开启了垂直同步（VSync），它将根据显示器的刷新率来限制帧速率。
         在这种情况下，通常不需要额外控制帧率，因为 VSync 会自动将帧速率与显示器的刷新率同步，避免出现撕裂和过度消耗资源的情况。
@@ -318,22 +235,6 @@ impl System {
             &[0 as u16, 1, 2, 3],
         )
             .unwrap();
-
-        let screenshot = capture_screenshot(&display);
-        let my_texture_id = renderer.textures().insert(Texture {
-            texture: Rc::new(screenshot.unwrap()),
-            sampler: SamplerBehavior {
-                // minify_filter: MinifySamplerFilter::NearestMipmapLinear,
-                // magnify_filter: MagnifySamplerFilter::Nearest,
-                // wrap_function: (
-                //     SamplerWrapFunction::BorderClamp,
-                //     SamplerWrapFunction::BorderClamp,
-                //     SamplerWrapFunction::BorderClamp,
-                // ),
-                ..Default::default()
-            },
-        });
-
         // 加载图标纹理...
         let icon_texture_data = include_bytes!("../../haha.png");
         let icon_texture = glium::texture::RawImage2d::from_raw_rgba_reversed(icon_texture_data, (16, 16));

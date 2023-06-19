@@ -412,21 +412,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b365fabc795046672053e29c954733ec3b05e4be654ab130fe8f1f94d7051f35"
 
 [[package]]
-name = "d1"
-version = "0.1.0"
-dependencies = [
- "copypasta",
- "glium",
- "image",
- "imgui",
- "imgui-glium-renderer",
- "imgui-winit-support",
- "screenshots",
- "winapi",
- "winit 0.28.6",
-]
-
-[[package]]
 name = "darling"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1530,6 +1515,20 @@ dependencies = [
  "widestring",
  "windows",
  "xcb",
+]
+
+[[package]]
+name = "screensnap"
+version = "0.1.0"
+dependencies = [
+ "copypasta",
+ "glium",
+ "image",
+ "imgui",
+ "imgui-glium-renderer",
+ "imgui-winit-support",
+ "screenshots",
+ "winit 0.28.6",
 ]
 
 [[package]]

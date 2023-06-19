@@ -6,7 +6,6 @@ use glium::{Display, Texture2d};
 use glium::texture::{RawImage2d, Texture2dDataSource};
 use imgui_glium_renderer::{Renderer, Texture};
 use screenshots::{Image, Screen};
-use usvg::TreeParsing;
 
 
 // pub fn load_svg_icon(renderer: &mut Renderer, svg_path: &str) -> Result<imgui::TextureId, String> {
