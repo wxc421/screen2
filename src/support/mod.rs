@@ -29,7 +29,6 @@ use imgui_winit_support::winit::window::{CursorIcon, WindowBuilder, WindowId};
 use crate::util;
 
 
-
 pub struct System {
     pub event_loop: EventLoop<()>,
     pub display: glium::Display,
@@ -77,15 +76,22 @@ pub fn init(title: &str) -> System {
         VSync 的目的是为了在图像渲染时消除撕裂效应，并提供平滑的视觉体验。
         开启 VSync 可以让图像与显示器的刷新率同步，每秒刷新次数不会超过显示器的最大刷新率（通常为 60Hz 或 120Hz）。
      */
-    let context = glutin::ContextBuilder::new().with_vsync(true);
+    let context = glutin::ContextBuilder::new()
+        .with_vsync(true)
+        .with_double_buffer(Some(true));
     let builder = glium::glutin::window::WindowBuilder::new()
         .with_title(title.to_owned())
         .with_visible(false)
         .with_always_on_top(true)
         .with_decorations(false)
         .with_fullscreen(Some(glutin::window::Fullscreen::Borderless(None)));
-    let display =
-        glium::Display::new(builder, context, &event_loop).expect("Failed to initialize display");
+    // let display =
+    //     glium::Display::new(builder, context, &event_loop).expect("Failed to initialize display");
+    let display = match glium::Display::new(builder, context, &event_loop) {
+        Ok(display) => display,
+        Err(e) => panic!("{}", e),
+    };
+
 
     let mut imgui = Context::create();
     imgui.set_ini_filename(None);
@@ -316,8 +322,8 @@ impl System {
                         .render(&mut target, draw_data)
                         .expect("Rendering failed");
                     target.finish().expect("Failed to swap buffers");
-                    display.gl_window().window().set_visible(true);
                     // display.gl_window().window().set_visible(true);
+                    display.gl_window().window().set_visible(true);
                 }
                 // Event::RedrawRequested(_) => {
                 //     return;
