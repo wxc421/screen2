@@ -1,5 +1,8 @@
 mod clipboard;
 
+
+extern crate glium;
+
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::path::Path;
@@ -7,8 +10,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
-use glium::{glutin, implement_vertex, Texture2d};
-use glium::{Display, Surface};
+use glium::{glutin, implement_vertex, Surface, Texture2d};
 use imgui::{Condition, Context, FontConfig, FontGlyphRanges, FontSource, Image, ImColor32, MouseButton, StyleColor, Ui};
 use imgui_glium_renderer::{Renderer, Texture};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
@@ -22,9 +24,10 @@ use imgui_winit_support::winit::dpi::PhysicalPosition;
 use imgui_winit_support::winit::event::{Event, VirtualKeyCode, WindowEvent};
 use imgui_winit_support::winit::event_loop::{ControlFlow, EventLoop};
 use imgui_winit_support::winit::platform::windows::WindowBuilderExtWindows;
-use imgui_winit_support::winit::window::{CursorIcon, Fullscreen, WindowBuilder, WindowId};
-use winit::event_loop::{EventLoopBuilder, EventLoopWindowTarget};
+use imgui_winit_support::winit::window::{CursorIcon, WindowBuilder, WindowId};
+
 use crate::util;
+
 
 
 pub struct System {
@@ -67,7 +70,7 @@ pub fn init(title: &str) -> System {
         Some(file_name) => file_name.to_str().unwrap(),
         None => title,
     };
-    let event_loop = glutin::event_loop::EventLoopBuilder::new().with_any_thread(true).build();
+    let event_loop = glium::glutin::event_loop::EventLoopBuilder::new().with_any_thread(true).build();
     /*
         如果你已经开启了垂直同步（VSync），它将根据显示器的刷新率来限制帧速率。
         在这种情况下，通常不需要额外控制帧率，因为 VSync 会自动将帧速率与显示器的刷新率同步，避免出现撕裂和过度消耗资源的情况。
@@ -75,18 +78,14 @@ pub fn init(title: &str) -> System {
         开启 VSync 可以让图像与显示器的刷新率同步，每秒刷新次数不会超过显示器的最大刷新率（通常为 60Hz 或 120Hz）。
      */
     let context = glutin::ContextBuilder::new().with_vsync(true);
-    let builder = WindowBuilder::new()
+    let builder = glium::glutin::window::WindowBuilder::new()
         .with_title(title.to_owned())
         .with_visible(false)
-        .with_position(glutin::dpi::LogicalPosition::new(0, 0))
+        .with_always_on_top(true)
         .with_decorations(false)
-        .with_undecorated_shadow(false)
-        // .with_max_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
-        // .with_min_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64))
-        .with_fullscreen(Some(Fullscreen::Borderless(None))); // 全屏窗口
-    // .with_inner_size(glutin::dpi::LogicalSize::new(524f64, 468f64));
+        .with_fullscreen(Some(glutin::window::Fullscreen::Borderless(None)));
     let display =
-        Display::new(builder, context, &event_loop).expect("Failed to initialize display");
+        glium::Display::new(builder, context, &event_loop).expect("Failed to initialize display");
 
     let mut imgui = Context::create();
     imgui.set_ini_filename(None);
@@ -196,7 +195,7 @@ pub struct UiInfo {
 // }
 
 impl System {
-    pub fn main_loop<F: FnMut(&mut bool, &mut Ui, &Display, &UiInfo) + 'static>(self, mut run_ui: F) {
+    pub fn main_loop<F: FnMut(&mut bool, &mut Ui, &glium::Display, &UiInfo) + 'static>(self, mut run_ui: F) {
         let System {
             event_loop,
             display,
@@ -320,28 +319,28 @@ impl System {
                     display.gl_window().window().set_visible(true);
                     // display.gl_window().window().set_visible(true);
                 }
-                Event::RedrawRequested(_) => {
-                    return;
-                    println!("=======================");
-                    let ui = imgui.frame();
-
-                    let mut run = true;
-                    run_ui(&mut run, ui, &display, &ui_info);
-                    if !run {
-                        *control_flow = ControlFlow::Exit;
-                    }
-
-                    let gl_window = display.gl_window();
-                    let mut target = display.draw();
-                    target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
-                    platform.prepare_render(ui, gl_window.window());
-                    let draw_data = imgui.render();
-                    renderer
-                        .render(&mut target, draw_data)
-                        .expect("Rendering failed");
-                    display.gl_window().window().set_visible(true);
-                    target.finish().expect("Failed to swap buffers");
-                }
+                // Event::RedrawRequested(_) => {
+                //     return;
+                //     println!("=======================");
+                //     let ui = imgui.frame();
+                //
+                //     let mut run = true;
+                //     run_ui(&mut run, ui, &display, &ui_info);
+                //     if !run {
+                //         *control_flow = ControlFlow::Exit;
+                //     }
+                //
+                //     let gl_window = display.gl_window();
+                //     let mut target = display.draw();
+                //     target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
+                //     platform.prepare_render(ui, gl_window.window());
+                //     let draw_data = imgui.render();
+                //     renderer
+                //         .render(&mut target, draw_data)
+                //         .expect("Rendering failed");
+                //     display.gl_window().window().set_visible(true);
+                //     target.finish().expect("Failed to swap buffers");
+                // }
                 Event::WindowEvent {
                     event,
                     window_id

@@ -1,0 +1,314 @@
+screensnap v0.1.0 (/mnt/c/coding/screen2)
+├── copypasta v0.8.2
+│   ├── smithay-clipboard v0.6.6
+│   │   ├── smithay-client-toolkit v0.16.0
+│   │   │   ├── bitflags v1.3.2
+│   │   │   ├── calloop v0.10.6
+│   │   │   │   ├── bitflags v1.3.2
+│   │   │   │   ├── log v0.4.19
+│   │   │   │   ├── nix v0.25.1
+│   │   │   │   │   ├── bitflags v1.3.2
+│   │   │   │   │   ├── cfg-if v1.0.0
+│   │   │   │   │   ├── libc v0.2.146
+│   │   │   │   │   └── memoffset v0.6.5
+│   │   │   │   │       [build-dependencies]
+│   │   │   │   │       └── autocfg v1.1.0
+│   │   │   │   │   [build-dependencies]
+│   │   │   │   │   └── autocfg v1.1.0
+│   │   │   │   ├── slotmap v1.0.6
+│   │   │   │   │   [build-dependencies]
+│   │   │   │   │   └── version_check v0.9.4
+│   │   │   │   ├── thiserror v1.0.40
+│   │   │   │   │   └── thiserror-impl v1.0.40 (proc-macro)
+│   │   │   │   │       ├── proc-macro2 v1.0.60
+│   │   │   │   │       │   └── unicode-ident v1.0.9
+│   │   │   │   │       ├── quote v1.0.28
+│   │   │   │   │       │   └── proc-macro2 v1.0.60 (*)
+│   │   │   │   │       └── syn v2.0.18
+│   │   │   │   │           ├── proc-macro2 v1.0.60 (*)
+│   │   │   │   │           ├── quote v1.0.28 (*)
+│   │   │   │   │           └── unicode-ident v1.0.9
+│   │   │   │   └── vec_map v0.8.2
+│   │   │   ├── dlib v0.5.2
+│   │   │   │   └── libloading v0.8.0
+│   │   │   │       └── cfg-if v1.0.0
+│   │   │   ├── lazy_static v1.4.0
+│   │   │   ├── log v0.4.19
+│   │   │   ├── memmap2 v0.5.10
+│   │   │   │   └── libc v0.2.146
+│   │   │   ├── nix v0.24.3
+│   │   │   │   ├── bitflags v1.3.2
+│   │   │   │   ├── cfg-if v1.0.0
+│   │   │   │   ├── libc v0.2.146
+│   │   │   │   └── memoffset v0.6.5 (*)
+│   │   │   ├── wayland-client v0.29.5
+│   │   │   │   ├── bitflags v1.3.2
+│   │   │   │   ├── downcast-rs v1.2.0
+│   │   │   │   ├── libc v0.2.146
+│   │   │   │   ├── nix v0.24.3 (*)
+│   │   │   │   ├── scoped-tls v1.0.1
+│   │   │   │   ├── wayland-commons v0.29.5
+│   │   │   │   │   ├── nix v0.24.3 (*)
+│   │   │   │   │   ├── once_cell v1.18.0
+│   │   │   │   │   ├── smallvec v1.10.0
+│   │   │   │   │   └── wayland-sys v0.29.5
+│   │   │   │   │       ├── dlib v0.5.2 (*)
+│   │   │   │   │       └── lazy_static v1.4.0
+│   │   │   │   │       [build-dependencies]
+│   │   │   │   │       └── pkg-config v0.3.27
+│   │   │   │   └── wayland-sys v0.29.5 (*)
+│   │   │   │   [build-dependencies]
+│   │   │   │   └── wayland-scanner v0.29.5
+│   │   │   │       ├── proc-macro2 v1.0.60 (*)
+│   │   │   │       ├── quote v1.0.28 (*)
+│   │   │   │       └── xml-rs v0.8.14
+│   │   │   ├── wayland-cursor v0.29.5
+│   │   │   │   ├── nix v0.24.3 (*)
+│   │   │   │   ├── wayland-client v0.29.5 (*)
+│   │   │   │   └── xcursor v0.3.4
+│   │   │   │       └── nom v7.1.3
+│   │   │   │           ├── memchr v2.5.0
+│   │   │   │           └── minimal-lexical v0.2.1
+│   │   │   └── wayland-protocols v0.29.5
+│   │   │       ├── bitflags v1.3.2
+│   │   │       ├── wayland-client v0.29.5 (*)
+│   │   │       └── wayland-commons v0.29.5 (*)
+│   │   │       [build-dependencies]
+│   │   │       └── wayland-scanner v0.29.5 (*)
+│   │   │   [build-dependencies]
+│   │   │   └── pkg-config v0.3.27
+│   │   └── wayland-client v0.29.5 (*)
+│   └── x11-clipboard v0.7.1
+│       └── x11rb v0.10.1
+│           ├── gethostname v0.2.3
+│           │   └── libc v0.2.146
+│           ├── nix v0.24.3 (*)
+│           └── x11rb-protocol v0.10.0
+│               └── nix v0.24.3 (*)
+├── glium v0.32.1
+│   ├── backtrace v0.3.67
+│   │   ├── addr2line v0.19.0
+│   │   │   └── gimli v0.27.3
+│   │   ├── cfg-if v1.0.0
+│   │   ├── libc v0.2.146
+│   │   ├── miniz_oxide v0.6.2
+│   │   │   └── adler v1.0.2
+│   │   ├── object v0.30.4
+│   │   │   └── memchr v2.5.0
+│   │   └── rustc-demangle v0.1.23
+│   │   [build-dependencies]
+│   │   └── cc v1.0.79
+│   ├── fnv v1.0.7
+│   ├── glutin v0.29.1
+│   │   ├── glutin_egl_sys v0.1.6
+│   │   │   [build-dependencies]
+│   │   │   └── gl_generator v0.14.0
+│   │   │       ├── khronos_api v3.1.0
+│   │   │       ├── log v0.4.19
+│   │   │       └── xml-rs v0.8.14
+│   │   ├── glutin_glx_sys v0.1.8
+│   │   │   └── x11-dl v2.21.0
+│   │   │       ├── libc v0.2.146
+│   │   │       └── once_cell v1.18.0
+│   │   │       [build-dependencies]
+│   │   │       └── pkg-config v0.3.27
+│   │   │   [build-dependencies]
+│   │   │   └── gl_generator v0.14.0 (*)
+│   │   ├── libloading v0.7.4
+│   │   │   └── cfg-if v1.0.0
+│   │   ├── log v0.4.19
+│   │   ├── once_cell v1.18.0
+│   │   ├── osmesa-sys v0.1.2
+│   │   │   └── shared_library v0.1.9
+│   │   │       ├── lazy_static v1.4.0
+│   │   │       └── libc v0.2.146
+│   │   ├── parking_lot v0.12.1
+│   │   │   ├── lock_api v0.4.10
+│   │   │   │   └── scopeguard v1.1.0
+│   │   │   │   [build-dependencies]
+│   │   │   │   └── autocfg v1.1.0
+│   │   │   └── parking_lot_core v0.9.8
+│   │   │       ├── cfg-if v1.0.0
+│   │   │       ├── libc v0.2.146
+│   │   │       └── smallvec v1.10.0
+│   │   ├── wayland-client v0.29.5 (*)
+│   │   ├── wayland-egl v0.29.5
+│   │   │   ├── wayland-client v0.29.5 (*)
+│   │   │   └── wayland-sys v0.29.5 (*)
+│   │   └── winit v0.27.5
+│   │       ├── bitflags v1.3.2
+│   │       ├── instant v0.1.12
+│   │       │   └── cfg-if v1.0.0
+│   │       ├── libc v0.2.146
+│   │       ├── log v0.4.19
+│   │       ├── mio v0.8.8
+│   │       │   ├── libc v0.2.146
+│   │       │   └── log v0.4.19
+│   │       ├── once_cell v1.18.0
+│   │       ├── parking_lot v0.12.1 (*)
+│   │       ├── percent-encoding v2.3.0
+│   │       ├── raw-window-handle v0.4.3
+│   │       │   └── cty v0.2.2
+│   │       ├── raw-window-handle v0.5.2
+│   │       ├── sctk-adwaita v0.4.3
+│   │       │   ├── crossfont v0.5.1
+│   │       │   │   ├── foreign-types v0.5.0
+│   │       │   │   │   ├── foreign-types-macros v0.2.3 (proc-macro)
+│   │       │   │   │   │   ├── proc-macro2 v1.0.60 (*)
+│   │       │   │   │   │   ├── quote v1.0.28 (*)
+│   │       │   │   │   │   └── syn v2.0.18 (*)
+│   │       │   │   │   └── foreign-types-shared v0.3.1
+│   │       │   │   ├── freetype-rs v0.26.0
+│   │       │   │   │   ├── bitflags v1.3.2
+│   │       │   │   │   ├── freetype-sys v0.13.1
+│   │       │   │   │   │   └── libc v0.2.146
+│   │       │   │   │   │   [build-dependencies]
+│   │       │   │   │   │   ├── cmake v0.1.50
+│   │       │   │   │   │   │   └── cc v1.0.79
+│   │       │   │   │   │   └── pkg-config v0.3.27
+│   │       │   │   │   └── libc v0.2.146
+│   │       │   │   ├── libc v0.2.146
+│   │       │   │   ├── log v0.4.19
+│   │       │   │   └── servo-fontconfig v0.5.1
+│   │       │   │       ├── libc v0.2.146
+│   │       │   │       └── servo-fontconfig-sys v5.1.0
+│   │       │   │           ├── expat-sys v2.1.6
+│   │       │   │           │   [build-dependencies]
+│   │       │   │           │   ├── cmake v0.1.50 (*)
+│   │       │   │           │   └── pkg-config v0.3.27
+│   │       │   │           └── freetype-sys v0.13.1 (*)
+│   │       │   │           [build-dependencies]
+│   │       │   │           └── pkg-config v0.3.27
+│   │       │   │   [build-dependencies]
+│   │       │   │   └── pkg-config v0.3.27
+│   │       │   ├── log v0.4.19
+│   │       │   ├── smithay-client-toolkit v0.16.0 (*)
+│   │       │   └── tiny-skia v0.7.0
+│   │       │       ├── arrayref v0.3.7
+│   │       │       ├── arrayvec v0.5.2
+│   │       │       ├── bytemuck v1.13.1
+│   │       │       ├── cfg-if v1.0.0
+│   │       │       ├── png v0.17.9
+│   │       │       │   ├── bitflags v1.3.2
+│   │       │       │   ├── crc32fast v1.3.2
+│   │       │       │   │   └── cfg-if v1.0.0
+│   │       │       │   ├── fdeflate v0.3.0
+│   │       │       │   │   └── simd-adler32 v0.3.5
+│   │       │       │   ├── flate2 v1.0.26
+│   │       │       │   │   ├── crc32fast v1.3.2 (*)
+│   │       │       │   │   └── miniz_oxide v0.7.1
+│   │       │       │   │       ├── adler v1.0.2
+│   │       │       │   │       └── simd-adler32 v0.3.5
+│   │       │       │   └── miniz_oxide v0.7.1 (*)
+│   │       │       ├── safe_arch v0.5.2
+│   │       │       │   └── bytemuck v1.13.1
+│   │       │       └── tiny-skia-path v0.7.0
+│   │       │           ├── arrayref v0.3.7
+│   │       │           └── bytemuck v1.13.1
+│   │       ├── smithay-client-toolkit v0.16.0 (*)
+│   │       ├── wayland-client v0.29.5 (*)
+│   │       ├── wayland-protocols v0.29.5 (*)
+│   │       └── x11-dl v2.21.0 (*)
+│   ├── lazy_static v1.4.0
+│   ├── memoffset v0.6.5 (*)
+│   ├── smallvec v1.10.0
+│   └── takeable-option v0.5.0
+│   [build-dependencies]
+│   └── gl_generator v0.14.0 (*)
+├── image v0.23.14
+│   ├── bytemuck v1.13.1
+│   ├── byteorder v1.4.3
+│   ├── color_quant v1.1.0
+│   ├── gif v0.11.4
+│   │   ├── color_quant v1.1.0
+│   │   └── weezl v0.1.7
+│   ├── jpeg-decoder v0.1.22
+│   │   └── rayon v1.7.0
+│   │       ├── either v1.8.1
+│   │       └── rayon-core v1.11.0
+│   │           ├── crossbeam-channel v0.5.8
+│   │           │   ├── cfg-if v1.0.0
+│   │           │   └── crossbeam-utils v0.8.16
+│   │           │       └── cfg-if v1.0.0
+│   │           ├── crossbeam-deque v0.8.3
+│   │           │   ├── cfg-if v1.0.0
+│   │           │   ├── crossbeam-epoch v0.9.15
+│   │           │   │   ├── cfg-if v1.0.0
+│   │           │   │   ├── crossbeam-utils v0.8.16 (*)
+│   │           │   │   ├── memoffset v0.9.0
+│   │           │   │   │   [build-dependencies]
+│   │           │   │   │   └── autocfg v1.1.0
+│   │           │   │   └── scopeguard v1.1.0
+│   │           │   │   [build-dependencies]
+│   │           │   │   └── autocfg v1.1.0
+│   │           │   └── crossbeam-utils v0.8.16 (*)
+│   │           ├── crossbeam-utils v0.8.16 (*)
+│   │           └── num_cpus v1.15.0
+│   │               └── libc v0.2.146
+│   ├── num-iter v0.1.43
+│   │   ├── num-integer v0.1.45
+│   │   │   └── num-traits v0.2.15
+│   │   │       [build-dependencies]
+│   │   │       └── autocfg v1.1.0
+│   │   │   [build-dependencies]
+│   │   │   └── autocfg v1.1.0
+│   │   └── num-traits v0.2.15 (*)
+│   │   [build-dependencies]
+│   │   └── autocfg v1.1.0
+│   ├── num-rational v0.3.2
+│   │   ├── num-integer v0.1.45 (*)
+│   │   └── num-traits v0.2.15 (*)
+│   │   [build-dependencies]
+│   │   └── autocfg v1.1.0
+│   ├── num-traits v0.2.15 (*)
+│   ├── png v0.16.8
+│   │   ├── bitflags v1.3.2
+│   │   ├── crc32fast v1.3.2 (*)
+│   │   ├── deflate v0.8.6
+│   │   │   ├── adler32 v1.2.0
+│   │   │   └── byteorder v1.4.3
+│   │   └── miniz_oxide v0.3.7
+│   │       └── adler32 v1.2.0
+│   ├── scoped_threadpool v0.1.9
+│   └── tiff v0.6.1
+│       ├── jpeg-decoder v0.1.22 (*)
+│       ├── miniz_oxide v0.4.4
+│       │   └── adler v1.0.2
+│       │   [build-dependencies]
+│       │   └── autocfg v1.1.0
+│       └── weezl v0.1.7
+├── imgui v0.10.0
+│   ├── bitflags v1.3.2
+│   ├── cfg-if v1.0.0
+│   ├── imgui-sys v0.10.0
+│   │   ├── cfg-if v1.0.0
+│   │   ├── chlorine v1.0.10
+│   │   └── mint v0.5.9
+│   │   [build-dependencies]
+│   │   └── cc v1.0.79
+│   ├── mint v0.5.9
+│   └── parking_lot v0.12.1 (*)
+├── imgui-glium-renderer v0.10.0
+│   ├── glium v0.32.1 (*)
+│   └── imgui v0.10.0 (*)
+├── imgui-winit-support v0.10.0
+│   ├── imgui v0.10.0 (*)
+│   └── winit v0.27.5 (*)
+└── screenshots v0.6.0
+    ├── anyhow v1.0.71
+    ├── dbus v0.9.7
+    │   ├── libc v0.2.146
+    │   └── libdbus-sys v0.2.5
+    │       [build-dependencies]
+    │       ├── cc v1.0.79
+    │       └── pkg-config v0.3.27
+    ├── display-info v0.4.2
+    │   ├── anyhow v1.0.71
+    │   └── xcb v1.2.1
+    │       ├── bitflags v1.3.2
+    │       └── libc v0.2.146
+    │       [build-dependencies]
+    │       └── quick-xml v0.28.2
+    │           └── memchr v2.5.0
+    ├── png v0.17.9 (*)
+    └── xcb v1.2.1 (*)
