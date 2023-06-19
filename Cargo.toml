@@ -14,10 +14,10 @@ glium = "0.32.1"
 imgui-glium-renderer = "0.11.0"
 copypasta = "0.8.2"
 winapi = "0.3.9"
-usvg = "0.34.1"
-tiny-skia = "0.11.1"
-instrument = "0.2.0"
 screenshots = "0.6.0"
+
+[lib]
+crate-type = ["cdylib"]
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winuser"] }
