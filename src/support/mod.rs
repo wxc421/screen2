@@ -220,29 +220,29 @@ impl System {
 
         let mut last_frame = Instant::now();
 
-        // 创建一个顶点缓冲对象（VBO）
-        let vertex_buffer = {
-            #[rustfmt::skip]
-                let vertex_data: [Vertex; 4] = [
-                Vertex { position: [-1.0, -1.0], tex_coords: [0.0, 1.0] },
-                Vertex { position: [-1.0, 1.0], tex_coords: [0.0, 0.0] },
-                Vertex { position: [1.0, -1.0], tex_coords: [1.0, 1.0] },
-                Vertex { position: [1.0, 1.0], tex_coords: [1.0, 0.0] },
-            ];
-
-            glium::VertexBuffer::new(&display, &vertex_data).unwrap()
-        };
-
-        // 创建一个索引缓冲对象（IBO）
-        let index_buffer = glium::IndexBuffer::new(
-            &display,
-            glium::index::PrimitiveType::TriangleStrip,
-            &[0 as u16, 1, 2, 3],
-        )
-            .unwrap();
-        // 加载图标纹理...
-        let icon_texture_data = include_bytes!("../../haha.png");
-        let icon_texture = glium::texture::RawImage2d::from_raw_rgba_reversed(icon_texture_data, (16, 16));
+        // // 创建一个顶点缓冲对象（VBO）
+        // let vertex_buffer = {
+        //     #[rustfmt::skip]
+        //         let vertex_data: [Vertex; 4] = [
+        //         Vertex { position: [-1.0, -1.0], tex_coords: [0.0, 1.0] },
+        //         Vertex { position: [-1.0, 1.0], tex_coords: [0.0, 0.0] },
+        //         Vertex { position: [1.0, -1.0], tex_coords: [1.0, 1.0] },
+        //         Vertex { position: [1.0, 1.0], tex_coords: [1.0, 0.0] },
+        //     ];
+        //
+        //     glium::VertexBuffer::new(&display, &vertex_data).unwrap()
+        // };
+        //
+        // // 创建一个索引缓冲对象（IBO）
+        // let index_buffer = glium::IndexBuffer::new(
+        //     &display,
+        //     glium::index::PrimitiveType::TriangleStrip,
+        //     &[0 as u16, 1, 2, 3],
+        // )
+        //     .unwrap();
+        // // 加载图标纹理...
+        // let icon_texture_data = include_bytes!("../../haha.png");
+        // let icon_texture = glium::texture::RawImage2d::from_raw_rgba_reversed(icon_texture_data, (16, 16));
         // let icon_texture = glium::texture::Texture2d::new(&display, icon_texture).unwrap();
         // let icon_texture_id = renderer.textures().insert(Texture {
         //     texture: Rc::new(icon_texture),
@@ -291,7 +291,7 @@ impl System {
         event_loop.run(move |event, _, control_flow| {
             *control_flow = ControlFlow::Poll;
             // *control_flow = ControlFlow::Wait;
-            println!("Event:{:?}", event);
+            // println!("Event:{:?}", event);
             match event {
                 Event::NewEvents(_) => {
                     let now = Instant::now();
@@ -303,8 +303,8 @@ impl System {
                     platform
                         .prepare_frame(imgui.io_mut(), gl_window.window())
                         .expect("Failed to prepare frame");
-                    gl_window.window().request_redraw();
-                    println!("=======================");
+                    // gl_window.window().request_redraw();
+                    // println!("=======================");
                     let ui = imgui.frame();
 
                     let mut run = true;
@@ -369,14 +369,14 @@ impl System {
                     } => {
                         let gl_window = display.gl_window();
                         let window = gl_window.window();
-                        println!("Mouse position: ({}, {})", position.x, position.y);
+                        // println!("Mouse position: ({}, {})", position.x, position.y);
                         // todo 研究一下
                         let scale = window.scale_factor(); // 2
-                        println!("window.scale_factor():{}", scale);
+                        // println!("window.scale_factor():{}", scale);
                         let position = position.to_logical(scale);
-                        println!("position.to_logical(scale):{:?}", position);
+                        // println!("position.to_logical(scale):{:?}", position);
                         let position = platform.scale_pos_from_winit(window, position);
-                        println!("platform.scale_pos_from_winit(window, position):{:?}", position);
+                        // println!("platform.scale_pos_from_winit(window, position):{:?}", position);
                         // io.add_mouse_pos_event([position.x as f32, position.y as f32]);
                         imgui.io_mut().add_mouse_pos_event([position.x as f32, position.y as f32]);
                         // if draw_state.is_drawing {
