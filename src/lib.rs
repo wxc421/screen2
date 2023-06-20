@@ -1,6 +1,7 @@
 mod support;
 mod util;
 mod ffi;
+mod core;
 
 fn run_screenshot() {
     support::run();

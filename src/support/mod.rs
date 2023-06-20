@@ -8,6 +8,7 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
 use glium::{glutin, implement_vertex, Surface, Texture2d};
@@ -15,6 +16,7 @@ use imgui::{Condition, Context, FontConfig, FontGlyphRanges, FontSource, Image, 
 use imgui_glium_renderer::{Renderer, Texture};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use std::time::Instant;
+use glium::glutin::platform::run_return::EventLoopExtRunReturn;
 use glium::glutin::platform::windows::EventLoopBuilderExtWindows;
 use glium::texture::TextureCreationError;
 use glium::uniforms::{MagnifySamplerFilter, MinifySamplerFilter, SamplerBehavior, SamplerWrapFunction};
@@ -25,8 +27,17 @@ use imgui_winit_support::winit::event::{Event, VirtualKeyCode, WindowEvent};
 use imgui_winit_support::winit::event_loop::{ControlFlow, EventLoop};
 use imgui_winit_support::winit::platform::windows::WindowBuilderExtWindows;
 use imgui_winit_support::winit::window::{CursorIcon, WindowBuilder, WindowId};
-
+use once_cell::unsync::OnceCell;
+use lazy_static::lazy_static;
 use crate::util;
+
+pub fn init_event_loop() -> EventLoop<()> {
+    // 初始化 EventLoop
+    let event_loop = glium::glutin::event_loop::EventLoopBuilder::new()
+        .with_any_thread(true)
+        .build();
+    event_loop
+}
 
 
 pub struct System {
@@ -64,12 +75,22 @@ struct DrawState {
     color: [f32; 4],
 }
 
+
 pub fn init(title: &str) -> System {
     let title = match Path::new(&title).file_name() {
         Some(file_name) => file_name.to_str().unwrap(),
         None => title,
     };
-    let event_loop = glium::glutin::event_loop::EventLoopBuilder::new().with_any_thread(true).build();
+    // static EVENT_LOOP_CREATED: OnceCell<EVENT_LOOP<()>> = OnceCell::new();
+    //
+    // EVENT_LOOP_CREATED.get_or_init(|| {
+    //     glium::glutin::event_loop::EventLoopBuilder::new().with_any_thread(true).build()
+    // });
+    // let event_loop = EVENT_LOOP_CREATED.into_inner().unwrap();
+    // Creating EVENT_LOOP multiple times is not supported.
+    let event_loop = init_event_loop();
+
+
     /*
         如果你已经开启了垂直同步（VSync），它将根据显示器的刷新率来限制帧速率。
         在这种情况下，通常不需要额外控制帧率，因为 VSync 会自动将帧速率与显示器的刷新率同步，避免出现撕裂和过度消耗资源的情况。
@@ -77,8 +98,8 @@ pub fn init(title: &str) -> System {
         开启 VSync 可以让图像与显示器的刷新率同步，每秒刷新次数不会超过显示器的最大刷新率（通常为 60Hz 或 120Hz）。
      */
     let context = glutin::ContextBuilder::new()
-        .with_vsync(true)
-        .with_double_buffer(Some(true));
+        .with_vsync(false)
+        .with_double_buffer(Some(false));
     let builder = glium::glutin::window::WindowBuilder::new()
         .with_title(title.to_owned())
         .with_visible(false)
@@ -203,7 +224,7 @@ pub struct UiInfo {
 impl System {
     pub fn main_loop<F: FnMut(&mut bool, &mut Ui, &glium::Display, &UiInfo) + 'static>(self, mut run_ui: F) {
         let System {
-            event_loop,
+            mut event_loop,
             display,
             mut imgui,
             mut platform,
@@ -288,7 +309,9 @@ impl System {
 
         println!("will into event_loop");
 
-        event_loop.run(move |event, _, control_flow| {
+
+        event_loop.run_return(move |event, _, control_flow| {
+            let gl_window = display.gl_window();
             *control_flow = ControlFlow::Poll;
             // *control_flow = ControlFlow::Wait;
             // println!("Event:{:?}", event);
@@ -299,7 +322,7 @@ impl System {
                     last_frame = now;
                 }
                 Event::MainEventsCleared => {
-                    let gl_window = display.gl_window();
+                    // let gl_window = display.gl_window();
                     platform
                         .prepare_frame(imgui.io_mut(), gl_window.window())
                         .expect("Failed to prepare frame");
@@ -313,7 +336,7 @@ impl System {
                         *control_flow = ControlFlow::Exit;
                     }
 
-                    let gl_window = display.gl_window();
+                    // let gl_window = display.gl_window();
                     let mut target = display.draw();
                     target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
                     platform.prepare_render(ui, gl_window.window());
@@ -367,7 +390,7 @@ impl System {
                         position,
                         ..
                     } => {
-                        let gl_window = display.gl_window();
+                        // let gl_window = display.gl_window();
                         let window = gl_window.window();
                         // println!("Mouse position: ({}, {})", position.x, position.y);
                         // todo 研究一下
@@ -395,7 +418,7 @@ impl System {
                             event,
 
                         };
-                        let gl_window = display.gl_window();
+                        // let gl_window = display.gl_window();
                         platform.handle_event(imgui.io_mut(), gl_window.window(), &event1);
                     }
                 }
@@ -404,7 +427,9 @@ impl System {
                     platform.handle_event(imgui.io_mut(), gl_window.window(), &event);
                 }
             }
-        })
+        });
+
+        println!("will into event_loop");
     }
 }
 
@@ -509,7 +534,7 @@ pub fn run() {
                 // ui.button("Button 2");
                 // let window_pos = ui.window_pos();
                 let window_size = ui.window_size();
-                println!("window_size:{:?}", window_size);
+                // println!("window_size:{:?}", window_size);
                 // // ui.io().mouse_draw_cursor = true;
                 // ui.text_wrapped("Hello world!");
 
@@ -566,10 +591,10 @@ pub fn run() {
                     draw_list.add_line([cursor_pos[0], cursor_pos[1] - cursor_half_size],
                                        [cursor_pos[0], cursor_pos[1] + cursor_half_size], [1.0, 1.0, 1.0, 1.0]).build();
                 }
-                println!("ui.is_mouse_clicked(MouseButton::Left):{}", ui.is_mouse_clicked(MouseButton::Left));
+                // println!("ui.is_mouse_clicked(MouseButton::Left):{}", ui.is_mouse_clicked(MouseButton::Left));
                 // 鼠标左键按下开始选择
                 if ui.is_mouse_clicked(MouseButton::Left) && !is_selecting && !has_selection {
-                    println!("==sdsssddssd");
+                    // println!("==sdsssddssd");
                     display.gl_window().window().set_cursor_visible(true);
                     ui.set_mouse_cursor(Some(imgui::MouseCursor::Arrow));
                     is_selecting = true;
@@ -633,7 +658,7 @@ pub fn run() {
                         //     // 处理按钮点击事件的逻辑...
                         //     println!("Button clicked!");
                         // }
-                        println!("bottom_right:{:?}", bottom_right);
+                        // println!("bottom_right:{:?}", bottom_right);
                         ui.set_cursor_pos([bottom_right[0] - 6.0 * 20.0, bottom_right[1] + 10.0]);
                         ui.image_button("hello1", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
                         ui.same_line_with_spacing(0.0, 0.0);
@@ -647,7 +672,7 @@ pub fn run() {
                         ui.same_line_with_spacing(0.0, 0.0);
                         ui.image_button("hello6", ui_info.copy_to_clipboard_texture_id, [20 as f32, 20 as f32]);
 
-                        println!("ui.item_rect_size():{:?}", ui.item_rect_size());
+                        // println!("ui.item_rect_size():{:?}", ui.item_rect_size());
                     }
                     // // 将列设置为矩形框下方
                     // ui.set_column_offset(0, 60.0); // 调整起始偏移量
@@ -694,10 +719,10 @@ pub fn run() {
                     ) <= 10.0 {
                         *handle = Some(ResizeHandle::BottomRight);
                     } else {
-                        println!("mouse_pos:{:?}", mouse_pos);
-                        println!("handle_top_left:{:?}", handle_top_left);
-                        println!("handle_bottom_right[0] - handle_bottom_left[0]:{:?}", handle_bottom_right[0] - handle_bottom_left[0]);
-                        println!("handle_bottom_right[0] - handle_top_right[0]:{:?}", handle_bottom_right[0] - handle_top_right[0]);
+                        // println!("mouse_pos:{:?}", mouse_pos);
+                        // println!("handle_top_left:{:?}", handle_top_left);
+                        // println!("handle_bottom_right[0] - handle_bottom_left[0]:{:?}", handle_bottom_right[0] - handle_bottom_left[0]);
+                        // println!("handle_bottom_right[0] - handle_top_right[0]:{:?}", handle_bottom_right[0] - handle_top_right[0]);
                         if is_mouse_in_rect(
                             mouse_pos[0],
                             mouse_pos[1],
@@ -706,7 +731,7 @@ pub fn run() {
                             handle_bottom_right[0] - handle_top_left[0],
                             handle_bottom_right[1] - handle_top_left[1],
                         ) {
-                            println!("=====================in");
+                            // println!("=====================in");
                             *handle = Some(ResizeHandle::Inner);
                         } else {
                             *handle = Some(ResizeHandle::Outer);
@@ -754,7 +779,7 @@ pub fn run() {
                     end_pos = mouse_pos;
                     has_selection = true;
                     // 在这里可以获取选取的矩形范围，即 start_pos 和 end_pos
-                    println!("Selected area: {:?} - {:?}", start_pos, end_pos);
+                    // println!("Selected area: {:?} - {:?}", start_pos, end_pos);
                 }
 
 
