@@ -186,7 +186,7 @@ impl Cropper {
     }
 
     pub fn new(display: Display, event_loop: EventLoop<()>, screen: screenshots::Screen) -> Self {
-        Self { display, event_loop, screen }
+        Self { display, event_loop, screen, ui_info: Default::default(), renderer: Default::default() }
     }
 }
 
