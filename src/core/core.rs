@@ -137,13 +137,13 @@ impl Cropper {
                         .expect("Failed to prepare frame");
                     let ui = self.context.as_mut().unwrap().frame();
                     println!("thread::sleep(Duration::from_secs(5));");
-                    thread::sleep(Duration::from_secs(5));
+                    // thread::sleep(Duration::from_secs(5));
                     let clear_color = [0.0, 0.0, 1.0, 1.0]; // 使用灰色作为背景色
                     let _ = ui
                         .push_style_color(
                             StyleColor::WindowBg,
                             clear_color);
-                    thread::sleep(Duration::from_secs(3));
+                    // thread::sleep(Duration::from_secs(3));
 
                     // let gl_window = display.gl_window();
                     let mut target = self.display.draw();
@@ -159,7 +159,7 @@ impl Cropper {
                         .expect("Rendering failed");
                     target.finish().expect("Failed to swap buffers");
                     println!("self.display.gl_window().window().set_visible(true);");
-                    thread::sleep(Duration::from_secs(3));
+                    // thread::sleep(Duration::from_secs(3));
                     self.display.gl_window().window().set_visible(true);
                 }
                 Event::WindowEvent {
@@ -283,9 +283,17 @@ pub fn run() {
         }
     }).collect();
 
+    let mut handles = vec![];
     for mut cropper in croppers.into_iter() {
-        cropper.init();
-        cropper.start_event_loop()
+        unsafe {
+            handles.push(thread::spawn(move || {
+                cropper.init();
+                cropper.start_event_loop()
+            }));
+        }
+    }
+    for handle in handles {
+        handle.join().unwrap();
     }
 }
 
